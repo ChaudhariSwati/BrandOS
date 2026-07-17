@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FabricJSCanvas, useFabricJSEditor } from 'fabricjs-react';
+import { Rect, IText, Textbox, Image as FabricImage } from 'fabric';
 import { listBrandKits } from '../api/brandkits';
 import { getAsset, createAsset, updateAsset } from '../api/assets';
 
@@ -35,29 +36,33 @@ export default function CardEditor() {
   }, [id, editor]);
 
   const loadCanvasElements = (elements) => {
-    if (!editor) return;
+    if (!editor?.canvas) return;
     elements.forEach((el) => {
-      if (el.type === 'text') {
-        const text = new (window.fabric?.Textbox || window.fabric?.Text)(el.text || '', {
-          left: el.left, top: el.top, fontSize: el.fontSize || 32,
-          fontFamily: el.fontFamily, fill: el.fill, fontWeight: el.fontWeight,
-          width: el.width, angle: el.angle,
-        });
-        editor.canvas.add(text);
-      } else if (el.type === 'rect') {
-        const rect = new (window.fabric?.Rect)({
-          left: el.left, top: el.top, width: el.width || 100,
-          height: el.height || 100, fill: el.fill, rx: el.rx,
-        });
-        editor.canvas.add(rect);
+      try {
+        if (el.type === 'text') {
+          const text = new Textbox(el.text || '', {
+            left: el.left, top: el.top, fontSize: el.fontSize || 32,
+            fontFamily: el.fontFamily, fill: el.fill, fontWeight: el.fontWeight,
+            width: el.width, angle: el.angle,
+          });
+          editor.canvas.add(text);
+        } else if (el.type === 'rect') {
+          const rect = new Rect({
+            left: el.left, top: el.top, width: el.width || 100,
+            height: el.height || 100, fill: el.fill, rx: el.rx || 0,
+          });
+          editor.canvas.add(rect);
+        }
+      } catch (e) {
+        console.warn('Failed to load element:', e);
       }
     });
     editor.canvas.renderAll();
   };
 
   const addText = () => {
-    if (!editor) return;
-    const text = new (window.fabric?.IText || window.fabric?.Textbox)('Double click to edit', {
+    if (!editor?.canvas) return;
+    const text = new IText('Double click to edit', {
       left: 100, top: 100, fontSize: 32, fontFamily: 'Poppins', fill: '#000',
     });
     editor.canvas.add(text);
@@ -66,8 +71,8 @@ export default function CardEditor() {
   };
 
   const addRect = () => {
-    if (!editor) return;
-    const rect = new (window.fabric?.Rect)({
+    if (!editor?.canvas) return;
+    const rect = new Rect({
       left: 150, top: 150, width: 200, height: 200, fill: '#FF4D4D',
     });
     editor.canvas.add(rect);
@@ -77,16 +82,16 @@ export default function CardEditor() {
 
   const addImage = () => {
     const url = prompt('Image URL:');
-    if (!url || !editor) return;
-    window.fabric.Image.fromURL(url, (img) => {
+    if (!url || !editor?.canvas) return;
+    FabricImage.fromURL(url).then((img) => {
       img.set({ left: 100, top: 100, scaleX: 0.5, scaleY: 0.5 });
       editor.canvas.add(img);
       editor.canvas.renderAll();
-    });
+    }).catch(() => alert('Failed to load image'));
   };
 
   const clearCanvas = () => {
-    if (!editor) return;
+    if (!editor?.canvas) return;
     editor.canvas.clear();
     editor.canvas.renderAll();
   };
@@ -96,12 +101,13 @@ export default function CardEditor() {
     setSaving(true);
     setError('');
     try {
-      const elements = editor?.canvas?.getObjects().map((obj) => ({
+      const objects = editor?.canvas?.getObjects() || [];
+      const elements = objects.map((obj) => ({
         type: obj.type === 'i-text' || obj.type === 'textbox' ? 'text' : obj.type,
         left: obj.left, top: obj.top, width: obj.width, height: obj.height,
         fill: obj.fill, fontSize: obj.fontSize, fontFamily: obj.fontFamily,
         fontWeight: obj.fontWeight, angle: obj.angle, text: obj.text,
-      })) || [];
+      }));
 
       const payload = {
         brandKit: selectedKit,
@@ -150,7 +156,6 @@ export default function CardEditor() {
       </div>
 
       <div className="canvas-container" style={{ width: 800, height: 450 }}>
-        <canvas id="card-canvas" />
         <FabricJSCanvas onReady={onReady} />
       </div>
     </div>
