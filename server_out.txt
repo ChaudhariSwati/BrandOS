@@ -1,0 +1,42 @@
+
+> brandos-server@1.0.0 start
+> node src/index.js
+
+No MONGO_URI set. Starting in demo mode with in-memory database...
+BrandOS server running on port 5000
+In-memory MongoDB started at mongodb://127.0.0.1:58800/
+Seeding demo data...
+c:\Users\kumar\OneDrive\Desktop\BrandOS\server\node_modules\mongoose\lib\document.js:3387
+    this.$__.validationError = new ValidationError(this);
+                               ^
+
+ValidationError: User validation failed: org: Path `org` is required.
+    at Document.invalidate (c:\Users\kumar\OneDrive\Desktop\BrandOS\server\node_modules\mongoose\lib\document.js:3387:32)
+    at c:\Users\kumar\OneDrive\Desktop\BrandOS\server\node_modules\mongoose\lib\document.js:3148:17
+    at c:\Users\kumar\OneDrive\Desktop\BrandOS\server\node_modules\mongoose\lib\schemaType.js:1443:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11) {
+  errors: {
+    org: ValidatorError: Path `org` is required.
+        at validate (c:\Users\kumar\OneDrive\Desktop\BrandOS\server\node_modules\mongoose\lib\schemaType.js:1440:13)
+        at SchemaType.doValidate (c:\Users\kumar\OneDrive\Desktop\BrandOS\server\node_modules\mongoose\lib\schemaType.js:1424:7)
+        at c:\Users\kumar\OneDrive\Desktop\BrandOS\server\node_modules\mongoose\lib\document.js:3140:18
+        at process.processTicksAndRejections (node:internal/process/task_queues:85:11) {
+      properties: {
+        validator: [Function (anonymous)],
+        message: 'Path `org` is required.',
+        type: 'required',
+        path: 'org',
+        fullPath: undefined,
+        value: undefined
+      },
+      kind: 'required',
+      path: 'org',
+      value: undefined,
+      reason: undefined,
+      [Symbol(mongoose#validatorError)]: true
+    }
+  },
+  _message: 'User validation failed'
+}
+
+Node.js v22.19.0
