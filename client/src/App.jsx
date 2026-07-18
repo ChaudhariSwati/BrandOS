@@ -3,7 +3,7 @@ import { useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
-import Dashboard from '../../.continue/agents/Dashboard';
+import Dashboard from './pages/Dashboard';
 import BrandKits from './pages/BrandKits';
 import BrandKitEditor from './pages/BrandKitEditor';
 import Assets from './pages/Assets';
