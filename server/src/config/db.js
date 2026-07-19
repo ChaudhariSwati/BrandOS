@@ -3,25 +3,53 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
   const uri = process.env.MONGO_URI;
 
-  if (uri) {
-    // Production mode — connect to MongoDB Atlas
-    try {
-      const conn = await mongoose.connect(uri);
-      console.log(`MongoDB connected: ${conn.connection.host}`);
-    } catch (err) {
-      console.error(`MongoDB connection error: ${err.message}`);
-      process.exit(1);
-    }
-    return;
+  if (!uri) {
+    console.log('No MONGO_URI set. Attempting demo mode with in-memory MongoDB...');
+    return connectInMemory();
   }
 
-  // Local demo mode — try mongodb-memory-server (must be installed as devDep)
-  console.log('No MONGO_URI set. Attempting demo mode with in-memory MongoDB...');
+  // Production MongoDB connection with pooling
+  try {
+    const conn = await mongoose.connect(uri, {
+      maxPoolSize: parseInt(process.env.MONGO_POOL_SIZE || '10', 10),
+      minPoolSize: 2,
+      serverSelectionTimeoutMS: 5000,
+      heartbeatFrequencyMS: 10000,
+      retryWrites: true,
+      w: 'majority',
+    });
+    console.log(`MongoDB connected: ${conn.connection.host}`);
+    console.log(`MongoDB pool size: ${conn.connection.client?.options?.maxPoolSize || 'default'}`);
+
+    // Log connection events
+    mongoose.connection.on('error', (err) => {
+      console.error('MongoDB runtime error:', err.message);
+    });
+    mongoose.connection.on('disconnected', () => {
+      console.warn('MongoDB disconnected — attempting reconnection...');
+    });
+    mongoose.connection.on('reconnected', () => {
+      console.log('MongoDB reconnected');
+    });
+
+    return conn;
+  } catch (err) {
+    console.error(`MongoDB connection error: ${err.message}`);
+    console.log('⚠️  Starting without database — only demo endpoints will work.');
+    console.log('   Set MONGO_URI to a valid MongoDB connection string to enable full functionality.');
+    // Do NOT exit — allow demo mode to work without DB
+  }
+};
+
+async function connectInMemory() {
+  console.log('Attempting demo mode with in-memory MongoDB...');
   try {
     const { MongoMemoryServer } = require('mongodb-memory-server');
     const mongod = await MongoMemoryServer.create();
     const demoUri = await mongod.getUri();
-    await mongoose.connect(demoUri);
+    await mongoose.connect(demoUri, {
+      maxPoolSize: 5,
+    });
     console.log(`In-memory MongoDB started at ${demoUri}`);
     await seedDemoData();
   } catch (err) {
@@ -30,7 +58,7 @@ const connectDB = async () => {
     console.error('  Or set MONGO_URI in your .env file.');
     process.exit(1);
   }
-};
+}
 
 async function seedDemoData() {
   const User = require('../models/User');

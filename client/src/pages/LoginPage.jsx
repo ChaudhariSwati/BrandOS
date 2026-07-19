@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, demoLogin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,6 +20,17 @@ export default function LoginPage() {
       setError(err.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDemo = async () => {
+    setError('');
+    setDemoLoading(true);
+    try {
+      await demoLogin();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Demo login failed');
+      setDemoLoading(false);
     }
   };
 
@@ -41,6 +53,10 @@ export default function LoginPage() {
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
+        <div className="auth-divider"><span>or</span></div>
+        <button className="btn btn-demo" style={{ width: '100%' }} onClick={handleDemo} disabled={demoLoading}>
+          {demoLoading ? 'Loading demo…' : '🚀 Try Demo'}
+        </button>
         <p className="auth-alt">Don't have an account? <Link to="/signup">Sign up</Link></p>
       </div>
     </div>

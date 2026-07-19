@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { loginUser, signupUser, getMe } from '../api/auth';
+import { loginUser, signupUser, getMe, logoutUser, demoLogin as demoLoginApi } from '../api/auth';
 
 const AuthContext = createContext(null);
 
@@ -8,13 +8,25 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const loadUser = useCallback(async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token) { setLoading(false); return; }
+
+    // Demo mode: restore user from localStorage, skip DB lookup
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed.isDemo) {
+        setUser(parsed);
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       const { data } = await getMe();
       setUser(data);
     } catch {
-      localStorage.removeItem('token');
+      localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
     } finally {
       setLoading(false);
@@ -25,7 +37,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const { data } = await loginUser(email, password);
-    localStorage.setItem('token', data.token);
+    localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('user', JSON.stringify(data));
     setUser(data);
     return data;
@@ -33,20 +45,33 @@ export function AuthProvider({ children }) {
 
   const signup = async (name, email, password, orgName) => {
     const { data } = await signupUser(name, email, password, orgName);
-    localStorage.setItem('token', data.token);
+    localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('user', JSON.stringify(data));
     setUser(data);
     return data;
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
+  const demoLogin = async () => {
+    const { data } = await demoLoginApi();
+    localStorage.setItem('accessToken', data.accessToken);
+    localStorage.setItem('user', JSON.stringify(data));
+    setUser(data);
+    return data;
+  };
+
+  const logout = async () => {
+    try {
+      await logoutUser();
+    } catch {
+      // Ignore server errors during logout — clear locally anyway
+    }
+    localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, demoLogin, logout }}>
       {children}
     </AuthContext.Provider>
   );

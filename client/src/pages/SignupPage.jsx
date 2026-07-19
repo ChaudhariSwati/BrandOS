@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function SignupPage() {
-  const { signup } = useAuth();
+  const { signup, demoLogin } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [orgName, setOrgName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,6 +22,17 @@ export default function SignupPage() {
       setError(err.response?.data?.message || 'Signup failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDemo = async () => {
+    setError('');
+    setDemoLoading(true);
+    try {
+      await demoLogin();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Demo login failed');
+      setDemoLoading(false);
     }
   };
 
@@ -51,6 +63,10 @@ export default function SignupPage() {
             {loading ? 'Creating…' : 'Create Account'}
           </button>
         </form>
+        <div className="auth-divider"><span>or</span></div>
+        <button className="btn btn-demo" style={{ width: '100%' }} onClick={handleDemo} disabled={demoLoading}>
+          {demoLoading ? 'Loading demo…' : '🚀 Try Demo'}
+        </button>
         <p className="auth-alt">Already have an account? <Link to="/login">Sign in</Link></p>
       </div>
     </div>

@@ -1,7 +1,11 @@
 node_modules/
 .env
 *.log
+logs/
 .DS_Store
 dist/
 .vite/
 .continue/
+server/logs/
+server/package-lock.json
+client/package-lock.json
