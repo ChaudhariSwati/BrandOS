@@ -4,7 +4,12 @@ const { protect } = require('../middleware/authMiddleware');
 const {
   demoLogin,
   getDemoOrg,
+  createDemoBrandKit,
   getDemoBrandKits,
+  updateDemoBrandKit,
+  deleteDemoBrandKit,
+  uploadDemoLogo,
+  setActiveDemoKit,
   getDemoAssets,
   getDemoStats,
   getDemoMembers,
@@ -16,6 +21,11 @@ router.post('/login', demoLogin);
 // Demo data endpoints — require a valid demo token
 router.get('/org', protect, getDemoOrg);
 router.get('/brandkits', protect, getDemoBrandKits);
+router.post('/brandkits', protect, createDemoBrandKit);
+router.put('/brandkits/:id', protect, updateDemoBrandKit);
+router.delete('/brandkits/:id', protect, deleteDemoBrandKit);
+router.post('/brandkits/:id/logo', protect, uploadDemoLogo);
+router.post('/brandkits/:id/set-active', protect, setActiveDemoKit);
 router.get('/assets', protect, getDemoAssets);
 router.get('/stats', protect, getDemoStats);
 router.get('/members', protect, getDemoMembers);

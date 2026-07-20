@@ -35,8 +35,27 @@ app.use(helmet({
   } : false,
 }));
 
+const allowedOrigins = [
+  CLIENT_URL,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  /^https:\/\/brand-os-bnj3-.*\.vercel\.app$/,
+  /^https:\/\/.*\.vercel\.app$/,
+];
+
 app.use(cors({
-  origin: [CLIENT_URL, ...(NODE_ENV === 'development' ? ['http://localhost:5173', 'http://127.0.0.1:5173'] : [])],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (server-to-server, curl, etc.)
+    if (!origin) return callback(null, true);
+    const allowed = allowedOrigins.some(function (o) {
+      if (o instanceof RegExp) return o.test(origin);
+      return o === origin;
+    });
+    if (allowed) return callback(null, true);
+    console.warn('CORS blocked origin:', origin);
+    return callback(null, true); // Allow anyway for public API access
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],

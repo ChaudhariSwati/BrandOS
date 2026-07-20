@@ -45,6 +45,24 @@ const getDemoOrg = async (req, res) => {
   res.json(DEMO_ORG);
 };
 
+// POST /api/demo/brandkits — create a new brand kit (demo)
+const createDemoBrandKit = async (req, res) => {
+  const { name, colors, fonts, logoUrl } = req.body;
+  const newKit = {
+    _id: '507f1f77bcf86cd799439013',
+    org: DEMO_USER.org,
+    name: name || 'Untitled Brand Kit',
+    colors: colors || [],
+    fonts: fonts || { heading: 'Poppins', body: 'Inter' },
+    logoUrl: logoUrl || '',
+    version: 1,
+    createdBy: DEMO_USER._id,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  res.status(201).json(newKit);
+};
+
 // GET /api/demo/brandkits — returns demo brand kit data
 const getDemoBrandKits = async (req, res) => {
   res.json([
@@ -142,4 +160,37 @@ const getDemoMembers = async (req, res) => {
   ]);
 };
 
-module.exports = { demoLogin, getDemoOrg, getDemoBrandKits, getDemoAssets, getDemoStats, getDemoMembers };
+// PUT /api/demo/brandkits/:id — update a brand kit (demo)
+const updateDemoBrandKit = async (req, res) => {
+  const { name, colors, fonts, logoUrl } = req.body;
+  const updatedKit = {
+    _id: req.params.id,
+    org: DEMO_USER.org,
+    name: name || 'Acme Brand Kit',
+    colors: colors || ['#FF4D4D', '#1A1A1A', '#FAFAFA', '#FFD166', '#06D6A0'],
+    fonts: fonts || { heading: 'Poppins', body: 'Inter' },
+    logoUrl: logoUrl || 'https://placehold.co/200x80/FF4D4D/FFFFFF?text=ACME',
+    version: 4,
+    createdBy: DEMO_USER._id,
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  res.json(updatedKit);
+};
+
+// DELETE /api/demo/brandkits/:id — delete a brand kit (demo)
+const deleteDemoBrandKit = async (req, res) => {
+  res.json({ message: 'Brand kit deleted' });
+};
+
+// POST /api/demo/brandkits/:id/logo — upload logo for a kit (demo)
+const uploadDemoLogo = async (req, res) => {
+  res.json({ logoUrl: 'https://placehold.co/200x80/FF4D4D/FFFFFF?text=LOGO' });
+};
+
+// POST /api/demo/brandkits/:id/set-active — set a kit as active (demo)
+const setActiveDemoKit = async (req, res) => {
+  res.json({ activeBrandKit: req.params.id });
+};
+
+module.exports = { demoLogin, getDemoOrg, createDemoBrandKit, getDemoBrandKits, updateDemoBrandKit, deleteDemoBrandKit, uploadDemoLogo, setActiveDemoKit, getDemoAssets, getDemoStats, getDemoMembers };
