@@ -15,8 +15,14 @@ const DEMO_ORG = {
   tier: 'pro',
 };
 
+// Get JWT secret with a hardcoded fallback for demo mode
+const getDemoJwtSecret = () => {
+  return process.env.JWT_SECRET || 'demo-fallback-secret-brandos-2024';
+};
+
 // POST /api/auth/demo
 const demoLogin = async (req, res) => {
+  const secret = getDemoJwtSecret();
   const accessToken = jwt.sign(
     {
       id: DEMO_USER._id,
@@ -25,7 +31,7 @@ const demoLogin = async (req, res) => {
       type: 'access',
       isDemo: true,
     },
-    process.env.JWT_SECRET,
+    secret,
     { expiresIn: '2h' }
   );
 

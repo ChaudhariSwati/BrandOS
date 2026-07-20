@@ -2,6 +2,11 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const cache = require('../utils/cache');
 
+// Fallback JWT secret for demo mode — allows demo to work without .env
+const getJwtSecret = () => {
+  return process.env.JWT_SECRET || 'demo-fallback-secret-brandos-2024';
+};
+
 /**
  * Protect routes — verifies the JWT access token and attaches the
  * authenticated user (minus password) to req.user.
@@ -19,7 +24,7 @@ const protect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
 
     // Only accept access-type tokens for route protection
     if (decoded.type && decoded.type !== 'access') {
@@ -97,7 +102,7 @@ const optionalAuth = async (req, res, next) => {
   if (!token) return next();
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
 
     // Handle demo tokens
     if (decoded.isDemo) {
