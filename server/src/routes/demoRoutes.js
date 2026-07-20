@@ -6,10 +6,12 @@ const {
   getDemoOrg,
   createDemoBrandKit,
   getDemoBrandKits,
+  getDemoBrandKitById,
   updateDemoBrandKit,
   deleteDemoBrandKit,
   uploadDemoLogo,
   setActiveDemoKit,
+  extractDemoColors,
   getDemoAssets,
   getDemoStats,
   getDemoMembers,
@@ -22,6 +24,9 @@ router.post('/login', demoLogin);
 router.get('/org', protect, getDemoOrg);
 router.get('/brandkits', protect, getDemoBrandKits);
 router.post('/brandkits', protect, createDemoBrandKit);
+// Static routes must come BEFORE parameterized /:id routes
+router.post('/brandkits/extract-colors', protect, extractDemoColors);
+router.get('/brandkits/:id', protect, getDemoBrandKitById);
 router.put('/brandkits/:id', protect, updateDemoBrandKit);
 router.delete('/brandkits/:id', protect, deleteDemoBrandKit);
 router.post('/brandkits/:id/logo', protect, uploadDemoLogo);

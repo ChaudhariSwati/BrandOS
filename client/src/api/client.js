@@ -49,12 +49,18 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // Rewrite URL for demo mode
+  // Rewrite URL for demo mode — preserves sub-paths (IDs etc.)
   if (isDemoSession()) {
     const fullPath = config.url;
     for (const rule of DEMO_REWRITES) {
-      if (fullPath === rule.from || fullPath.startsWith(rule.from + '/')) {
+      if (fullPath === rule.from) {
         config.url = rule.to;
+        break;
+      }
+      if (fullPath.startsWith(rule.from + '/')) {
+        // Preserve the remaining path after the matched prefix
+        const suffix = fullPath.slice(rule.from.length);
+        config.url = rule.to + suffix;
         break;
       }
     }

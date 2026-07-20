@@ -189,6 +189,29 @@ const deleteDemoBrandKit = async (req, res) => {
   res.json({ message: 'Brand kit deleted' });
 };
 
+// GET /api/demo/brandkits/:id — get a single brand kit by ID (demo)
+const getDemoBrandKitById = async (req, res) => {
+  res.json({
+    _id: req.params.id,
+    org: DEMO_USER.org,
+    name: 'Acme Brand Kit',
+    colors: ['#FF4D4D', '#1A1A1A', '#FAFAFA', '#FFD166', '#06D6A0'],
+    fonts: { heading: 'Poppins', body: 'Inter' },
+    logoUrl: 'https://placehold.co/200x80/FF4D4D/FFFFFF?text=ACME',
+    version: 3,
+    createdBy: DEMO_USER._id,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+};
+
+// POST /api/demo/brandkits/extract-colors — AI color extraction demo
+const extractDemoColors = async (req, res) => {
+  const { imageUrl } = req.body;
+  // Return mock extracted colors (no Gemini needed in demo mode)
+  res.json({ colors: ['#FF4D4D', '#1A1A1A', '#FAFAFA', '#FFD166', '#06D6A0'] });
+};
+
 // POST /api/demo/brandkits/:id/logo — upload logo for a kit (demo)
 const uploadDemoLogo = async (req, res) => {
   res.json({ logoUrl: 'https://placehold.co/200x80/FF4D4D/FFFFFF?text=LOGO' });
@@ -199,4 +222,4 @@ const setActiveDemoKit = async (req, res) => {
   res.json({ activeBrandKit: req.params.id });
 };
 
-module.exports = { demoLogin, getDemoOrg, createDemoBrandKit, getDemoBrandKits, updateDemoBrandKit, deleteDemoBrandKit, uploadDemoLogo, setActiveDemoKit, getDemoAssets, getDemoStats, getDemoMembers };
+module.exports = { demoLogin, getDemoOrg, createDemoBrandKit, getDemoBrandKits, getDemoBrandKitById, updateDemoBrandKit, deleteDemoBrandKit, uploadDemoLogo, setActiveDemoKit, extractDemoColors, getDemoAssets, getDemoStats, getDemoMembers };
