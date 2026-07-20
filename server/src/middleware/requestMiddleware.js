@@ -20,7 +20,7 @@ function requestMiddleware(req, res, next) {
   // Set response header for tracing
   res.setHeader('X-Request-Id', req.requestId);
 
-  // Log response on finish
+  // Set response time header before response starts
   res.on('finish', () => {
     const duration = Date.now() - req.startTime;
     const level = res.statusCode >= 400 ? 'warn' : 'info';
@@ -29,9 +29,6 @@ function requestMiddleware(req, res, next) {
       statusCode: res.statusCode,
       duration,
     });
-
-    // Add response time header
-    res.setHeader('X-Response-Time', `${duration}ms`);
   });
 
   next();

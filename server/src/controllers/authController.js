@@ -19,19 +19,19 @@ const signup = async (req, res) => {
     throw new Error('User already exists with this email');
   }
 
-  // Create organization (owner's org)
+  // Create user first (no org yet)
+  const user = await User.create({ name, email, password, role: 'owner' });
+
+  // Create organization with the user as owner
   const org = await Organization.create({
     name: orgName || `${name}'s Organization`,
-    owner: null, // placeholder, will update
+    owner: user._id,
     tier: 'free',
   });
 
-  // Create user with org reference
-  const user = await User.create({ name, email, password, org: org._id, role: 'owner' });
-
-  // Update org with owner
-  org.owner = user._id;
-  await org.save();
+  // Update user with org reference
+  user.org = org._id;
+  await user.save();
 
   // Generate tokens
   const accessToken = generateAccessToken(user);

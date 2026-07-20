@@ -106,18 +106,39 @@ const renderPdf = async (req, res, next) => {
       html = buildLetterheadHtml(kit, elements);
     }
 
+    if (typeof html !== 'string' || !html.trim()) {
+      res.status(500);
+      throw new Error('Failed to build invoice HTML for PDF export');
+    }
+
     let browser;
     try {
       const puppeteer = require('puppeteer');
+
       browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--font-render-hinting=none',
+        ],
+        // Helps in some restricted/containerized environments
+        timeout: 60_000,
       });
+
       const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
+      // Increase robustness if fonts/images load slowly
+      await page.setContent(html, { waitUntil: 'networkidle0', timeout: 60_000 });
       await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 2 });
 
-      const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '10mm', right: '8mm', bottom: '10mm', left: '8mm' },
+      });
+
       const base64 = pdfBuffer.toString('base64');
       const dataUri = `data:application/pdf;base64,${base64}`;
       asset.exportUrl = dataUri;
@@ -125,11 +146,12 @@ const renderPdf = async (req, res, next) => {
 
       res.json({ exportUrl: dataUri, assetId: asset._id });
     } catch (puppeteerErr) {
-      console.warn('Puppeteer PDF render failed:', puppeteerErr.message);
+      console.warn('Puppeteer PDF render failed:', puppeteerErr?.message);
       res.json({
         exportUrl: '',
         assetId: asset._id,
-        note: 'PDF rendering unavailable in this environment.',
+        note: 'PDF rendering failed on the server.',
+        error: puppeteerErr?.message || String(puppeteerErr),
       });
     } finally {
       if (browser) await browser.close();
