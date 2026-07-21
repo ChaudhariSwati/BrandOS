@@ -1,6 +1,8 @@
 require('express-async-errors');
+const crypto = require('crypto');
 const User = require('../models/User');
 const Organization = require('../models/Organization');
+const { OAuth2Client } = require('google-auth-library');
 const {
   generateAccessToken,
   generateRefreshToken,
@@ -8,6 +10,18 @@ const {
   revokeRefreshToken,
 } = require('../utils/tokenUtils');
 const cache = require('../utils/cache');
+
+// Google OAuth client — initialized lazily so missing env var doesn't crash the server
+let googleClient = null;
+function getGoogleClient() {
+  if (!googleClient) {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (clientId) {
+      googleClient = new OAuth2Client(clientId);
+    }
+  }
+  return googleClient;
+}
 
 // POST /api/auth/signup
 const signup = async (req, res) => {
@@ -189,4 +203,90 @@ const getMe = async (req, res) => {
   res.json(user);
 };
 
-module.exports = { signup, login, refresh, logout, getMe };
+// POST /api/auth/google — Google OAuth Sign-In / Sign-Up
+const googleAuth = async (req, res) => {
+  const { credential } = req.body;
+
+  if (!credential) {
+    res.status(400);
+    throw new Error('Google credential is required');
+  }
+
+  const client = getGoogleClient();
+  if (!client) {
+    res.status(500);
+    throw new Error('Google OAuth is not configured. Set GOOGLE_CLIENT_ID in environment.');
+  }
+
+  let payload;
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    payload = ticket.getPayload();
+  } catch (err) {
+    res.status(401);
+    throw new Error('Invalid Google credential: ' + err.message);
+  }
+
+  const { sub: googleId, email, name, picture } = payload;
+
+  // Find user by email first, then link Google ID
+  let user = await User.findOne({ email });
+
+  if (user) {
+    // Existing user — update Google ID if not set
+    if (!user.googleId) {
+      user.googleId = googleId;
+      await user.save();
+    }
+  } else {
+    // New user — create account with Google info
+    user = await User.create({
+      name: name || email.split('@')[0],
+      email,
+      password: crypto.randomBytes(24).toString('hex'), // Random password (user logs in via Google)
+      googleId,
+      role: 'owner',
+    });
+
+    // Create default organization for new Google users
+    const org = await Organization.create({
+      name: `${user.name}'s Organization`,
+      owner: user._id,
+      tier: 'free',
+    });
+
+    user.org = org._id;
+    await user.save();
+  }
+
+  // Generate tokens
+  const accessToken = generateAccessToken(user);
+  const { refreshToken } = generateRefreshToken(user);
+
+  // Invalidate any cached profile for this user
+  await cache.del(cache.key('user', user._id.toString()));
+
+  // Set refresh token as HTTP-only cookie
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/api/auth',
+  });
+
+  res.json({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    org: user.org,
+    accessToken,
+    picture: picture || undefined,
+  });
+};
+
+module.exports = { signup, login, googleAuth, refresh, logout, getMe };

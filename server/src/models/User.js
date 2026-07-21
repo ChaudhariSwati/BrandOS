@@ -21,6 +21,11 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
       select: false,
     },
+    googleId: {
+      type: String,
+      default: null,
+      index: true,
+    },
     org: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Organization',

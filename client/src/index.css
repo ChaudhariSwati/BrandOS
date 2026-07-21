@@ -179,6 +179,38 @@ select.form-input {
   padding-right: 36px;
 }
 
+/* Password input with show/hide toggle */
+.password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrap .form-input {
+  padding-right: 44px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: var(--gray-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+  line-height: 1;
+}
+
+.password-toggle:hover {
+  color: var(--black);
+}
+
 /* Color swatch picker */
 .color-picker-group { display: flex; gap: 8px; flex-wrap: wrap; }
 
