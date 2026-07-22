@@ -5,6 +5,7 @@ const Organization = require('../models/Organization');
 const { OAuth2Client } = require('google-auth-library');
 const {
   generateAccessToken,
+  generate2FATempToken,
   generateRefreshToken,
   verifyRefreshToken,
   revokeRefreshToken,
@@ -77,10 +78,25 @@ const signup = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body;
 
+  // Use generic error to prevent email enumeration
+  const invalidCredentialsError = 'Invalid email or password';
+
   const user = await User.findOne({ email }).select('+password');
   if (!user || !(await user.matchPassword(password))) {
     res.status(401);
-    throw new Error('Invalid email or password');
+    throw new Error(invalidCredentialsError);
+  }
+
+  // If 2FA is enabled, return a temporary token instead of full access
+  if (user.twoFactorEnabled) {
+    const tempToken = generate2FATempToken(user);
+    return res.json({
+      requires2FA: true,
+      tempToken,
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+    });
   }
 
   // Generate tokens

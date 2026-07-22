@@ -43,6 +43,8 @@ const protect = async (req, res, next) => {
         role: decoded.role,
         org: decoded.org,
         isDemo: true,
+        emailVerified: true,
+        twoFactorEnabled: false,
       };
       req.orgId = decoded.org;
       req.tokenPayload = decoded;
@@ -66,6 +68,13 @@ const protect = async (req, res, next) => {
       }
       // Cache user for 5 minutes
       await cache.set(cacheKey, user, 300);
+    }
+
+    // Check token version for session revocation
+    if (decoded.tokenVersion !== undefined && user.tokenVersion !== undefined) {
+      if (decoded.tokenVersion < user.tokenVersion) {
+        return res.status(401).json({ message: 'Session has been revoked. Please sign in again.' });
+      }
     }
 
     req.user = user;
@@ -113,6 +122,8 @@ const optionalAuth = async (req, res, next) => {
         role: decoded.role,
         org: decoded.org,
         isDemo: true,
+        emailVerified: true,
+        twoFactorEnabled: false,
       };
       req.orgId = decoded.org;
       req.tokenPayload = decoded;
@@ -121,12 +132,52 @@ const optionalAuth = async (req, res, next) => {
 
     const user = await User.findById(decoded.id).select('-password').lean();
     if (user) {
+      // Check token version
+      if (decoded.tokenVersion !== undefined && user.tokenVersion !== undefined) {
+        if (decoded.tokenVersion < user.tokenVersion) {
+          return next(); // Continue without user if session revoked
+        }
+      }
       req.user = user;
       req.orgId = user.org?.toString();
       req.tokenPayload = decoded;
     }
   } catch {
     // Silently ignore invalid tokens for optional auth
+  }
+  next();
+};
+
+/**
+ * Middleware to check if user's email is verified.
+ * Must be used after `protect`.
+ */
+const checkEmailVerified = (req, res, next) => {
+  // Skip for demo users
+  if (req.user?.isDemo) return next();
+
+  if (!req.user?.emailVerified) {
+    return res.status(403).json({
+      message: 'Please verify your email before accessing this resource.',
+      code: 'EMAIL_NOT_VERIFIED',
+    });
+  }
+  next();
+};
+
+/**
+ * Middleware to check if 2FA is required for this user.
+ * Must be used after `protect`.
+ */
+const check2FARequired = async (req, res, next) => {
+  // Skip for demo users
+  if (req.user?.isDemo) return next();
+
+  if (req.user?.twoFactorEnabled) {
+    return res.status(403).json({
+      message: 'Two-factor authentication is required. Please complete 2FA verification.',
+      code: '2FA_REQUIRED',
+    });
   }
   next();
 };
@@ -141,11 +192,17 @@ const requireRole = (...allowedRoles) => {
       return res.status(401).json({ message: 'Not authorized' });
     }
     if (!allowedRoles.includes(req.user.role)) {
-      req.log?.warn(`Role check failed: user has "${req.user.role}", required "${allowedRoles.join(', ')}"`);
       return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
     }
     next();
   };
 };
 
-module.exports = { protect, optionalAuth, requireRole };
+module.exports = {
+  protect,
+  optionalAuth,
+  requireRole,
+  checkEmailVerified,
+  check2FARequired,
+};
+

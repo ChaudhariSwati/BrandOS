@@ -19,9 +19,27 @@ function generateAccessToken(user) {
       org: user.org?.toString(),
       role: user.role,
       type: 'access',
+      tokenVersion: user.tokenVersion || 0,
     },
     process.env.JWT_SECRET,
     { expiresIn: ACCESS_TOKEN_EXPIRY }
+  );
+}
+
+/**
+ * Generate a temporary token for 2FA verification during login.
+ * Short-lived (5 minutes), can only be used for the 2FA step.
+ * @param {object} user
+ * @returns {string} JWT
+ */
+function generate2FATempToken(user) {
+  return jwt.sign(
+    {
+      id: user._id.toString(),
+      type: '2fa_temp',
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '5m' }
   );
 }
 
@@ -89,6 +107,7 @@ async function revokeAllUserTokens(userId) {
 
 module.exports = {
   generateAccessToken,
+  generate2FATempToken,
   generateRefreshToken,
   verifyRefreshToken,
   revokeRefreshToken,

@@ -365,6 +365,288 @@ tr:hover td { background: #f5f5f5; }
   box-shadow: none;
 }
 
+/* ─── Password Strength Meter ──────────────────────────────────────────── */
+.password-strength {
+  margin-top: 8px;
+}
+
+.strength-bar-track {
+  width: 100%;
+  height: 6px;
+  background: var(--gray);
+  border: 2px solid var(--black);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.strength-bar-fill {
+  height: 100%;
+  border-radius: 0;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.strength-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.strength-requirements {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.strength-requirements li {
+  font-size: 12px;
+  padding: 2px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+
+.strength-requirements .req-passed {
+  color: #06d6a0;
+}
+
+.strength-requirements .req-failed {
+  color: var(--gray-dark);
+}
+
+.req-icon {
+  font-size: 12px;
+  width: 14px;
+  text-align: center;
+}
+
+/* ─── OTP Input ───────────────────────────────────────────────────────── */
+.otp-input-group {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.otp-input-box {
+  width: 48px;
+  height: 56px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  border: var(--border);
+  background: var(--white);
+  outline: none;
+  transition: all 0.15s;
+  caret-color: var(--accent);
+}
+
+.otp-input-box:focus {
+  box-shadow: 0 0 0 2px var(--accent);
+  border-color: var(--accent);
+}
+
+.otp-input-box:disabled {
+  opacity: 0.5;
+  background: var(--gray);
+}
+
+/* ─── Google Button ───────────────────────────────────────────────────── */
+.google-btn-wrapper {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.google-btn-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ─── Passkey Button ──────────────────────────────────────────────────── */
+.btn-passkey {
+  background: var(--white);
+  color: var(--black);
+  border: var(--border);
+  box-shadow: var(--shadow-sm);
+  font-size: 14px;
+  padding: 12px 20px;
+  gap: 8px;
+}
+
+.btn-passkey:hover {
+  background: #f0f0f0;
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow);
+}
+
+.btn-passkey:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.btn-passkey:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ─── Toast Notifications ─────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border: 3px solid;
+  box-shadow: 6px 6px 0 var(--black);
+  font-weight: 600;
+  font-size: 14px;
+  min-width: 300px;
+  max-width: 500px;
+}
+
+.toast-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  flex: 1;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  color: var(--gray-dark);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.toast-close:hover {
+  color: var(--black);
+}
+
+/* ─── Success Card ────────────────────────────────────────────────────── */
+.success-card {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.success-checkmark {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.success-title {
+  font-size: 24px;
+  margin-bottom: 12px;
+}
+
+.success-description {
+  color: var(--gray-dark);
+  font-size: 14px;
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.success-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ─── Success/Info Messages ───────────────────────────────────────────── */
+.success-message {
+  background: #e8faf4;
+  border: 3px solid #06d6a0;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  color: #0a7c5a;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: inherit;
+  font-family: inherit;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.link-button:hover {
+  color: var(--accent-hover);
+}
+
+/* ─── Button Loading Spinner ──────────────────────────────────────────── */
+.btn-loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Focus & Accessibility ───────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ─── Responsive Auth Pages ───────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .auth-card {
+    width: 100%;
+    max-width: 100%;
+    padding: 24px 16px;
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
+  }
+
+  .otp-input-box {
+    width: 40px;
+    height: 48px;
+    font-size: 20px;
+  }
+
+  .toast {
+    min-width: auto;
+    width: calc(100% - 32px);
+    top: 12px;
+  }
+}
+
 /* Canvas editor area */
 .canvas-toolbar {
   display: flex;
