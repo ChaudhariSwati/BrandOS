@@ -11,6 +11,12 @@ const {
   revokeRefreshToken,
 } = require('../utils/tokenUtils');
 const cache = require('../utils/cache');
+const mongoose = require('mongoose');
+
+// Helper: check if MongoDB is connected
+function isDbConnected() {
+  return mongoose.connection.readyState === 1;
+}
 
 // Google OAuth client — initialized lazily so missing env var doesn't crash the server
 let googleClient = null;
@@ -26,6 +32,11 @@ function getGoogleClient() {
 
 // POST /api/auth/signup
 const signup = async (req, res) => {
+  if (!isDbConnected()) {
+    res.status(503);
+    throw new Error('Database is not connected. Please try again later or use the demo login.');
+  }
+
   const { name, email, password, orgName } = req.body;
 
   const existingUser = await User.findOne({ email });

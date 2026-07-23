@@ -51,12 +51,16 @@ async function connectInMemory() {
       maxPoolSize: 5,
     });
     console.log(`In-memory MongoDB started at ${demoUri}`);
-    await seedDemoData();
+    try {
+      await seedDemoData();
+    } catch (seedErr) {
+      console.warn('Demo data seeding failed (non-fatal):', seedErr.message);
+      console.log('⚠️  Server will start without demo data. Sign up a new account to begin.');
+    }
   } catch (err) {
-    console.error('Demo mode requires mongodb-memory-server.');
-    console.error('  Run: npm install mongodb-memory-server --save-dev');
-    console.error('  Or set MONGO_URI in your .env file.');
-    process.exit(1);
+    console.error('Demo mode in-memory MongoDB could not start:', err.message);
+    console.log('⚠️  Starting without database — only demo endpoints will work.');
+    console.log('   Set MONGO_URI to a valid MongoDB connection string to enable full functionality.');
   }
 }
 
@@ -74,7 +78,7 @@ async function seedDemoData() {
   const user = await User.create({
     name: 'Demo User',
     email: 'demo@brandos.io',
-    password: 'demo123',
+    password: 'Demo@123',
     role: 'owner',
   });
 
@@ -117,9 +121,9 @@ async function seedDemoData() {
       body: 'Dear Sir/Madam,\n\nThis is to certify that...\n\nThank you,\nDemo User',
       footer: 'info@acme.demo | www.acme.demo' }, createdBy: user._id });
 
-  await User.create({ name: 'Jane Member', email: 'jane@acme.demo', password: 'demo123', org: org._id, role: 'member' });
+  await User.create({ name: 'Jane Member', email: 'jane@acme.demo', password: 'Jane@123', org: org._id, role: 'member' });
 
-  console.log('✅ Demo data seeded! Login: demo@brandos.io / demo123');
+  console.log('✅ Demo data seeded! Login: demo@brandos.io / Demo@123');
 }
 
 module.exports = connectDB;
