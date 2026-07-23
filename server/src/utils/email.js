@@ -2,6 +2,9 @@ const nodemailer = require('nodemailer');
 
 let transporter = null;
 
+// ─── Dev-mode in-memory email store ─────────────────────────────────────
+const devEmailStore = [];
+
 /**
  * Get or create a nodemailer transporter.
  * Falls back to console logging in development.
@@ -36,20 +39,35 @@ function getTransporter() {
 
 /**
  * Send an email.
- * In dev mode, logs the email to console.
- * In production, sends via configured SMTP transport.
- *
- * @param {object} options
- * @param {string} options.to - Recipient email
- * @param {string} options.subject - Email subject
- * @param {string} options.text - Plain text body
- * @param {string} [options.html] - HTML body (optional)
- * @returns {Promise<void>}
+ * If SMTP is configured, sends for real AND stores in dev inbox.
+ * If no SMTP, logs to console and stores in dev inbox.
  */
 async function sendEmail({ to, subject, text, html }) {
-  const isDev = process.env.NODE_ENV !== 'production' || !process.env.SMTP_HOST;
+  const hasSmtp = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 
-  if (isDev) {
+  // Store in in-memory dev inbox (always — useful for both modes)
+  devEmailStore.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    to,
+    subject,
+    text,
+    html,
+    sentAt: new Date().toISOString(),
+  });
+  while (devEmailStore.length > 50) devEmailStore.shift();
+
+  if (hasSmtp) {
+    // SMTP is configured — send the email for real
+    const transport = getTransporter();
+    await transport.sendMail({
+      from: process.env.SMTP_FROM || '"BrandOS" <noreply@brandos.io>',
+      to,
+      subject,
+      text,
+      html,
+    });
+  } else {
+    // Dev mode — log to console
     console.log('═══════════════════════════════════════════');
     console.log('  📧 DEV EMAIL');
     console.log(`  To:      ${to}`);
@@ -57,17 +75,7 @@ async function sendEmail({ to, subject, text, html }) {
     console.log(`  Text:    ${text}`);
     if (html) console.log(`  HTML:    [${html.length} chars]`);
     console.log('═══════════════════════════════════════════');
-    return;
   }
-
-  const transport = getTransporter();
-  await transport.sendMail({
-    from: process.env.SMTP_FROM || '"BrandOS" <noreply@brandos.io>',
-    to,
-    subject,
-    text,
-    html,
-  });
 }
 
 /**
@@ -138,10 +146,25 @@ async function sendOTPEmail(to, otp) {
   });
 }
 
+/**
+ * Get all dev-mode emails from the in-memory store.
+ */
+function getDevEmails() {
+  return [...devEmailStore];
+}
+
+/**
+ * Clear all dev-mode emails from the in-memory store.
+ */
+function clearDevEmails() {
+  devEmailStore.length = 0;
+}
+
 module.exports = {
   sendEmail,
   sendPasswordResetEmail,
   sendVerificationEmail,
   sendOTPEmail,
+  getDevEmails,
+  clearDevEmails,
 };
-

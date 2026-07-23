@@ -109,6 +109,16 @@ app.use('/api/assets', require('./routes/assetRoutes'));
 app.use('/api/export', require('./routes/exportRoutes'));
 app.use('/api/demo', require('./routes/demoRoutes'));
 
+// ─── Dev-only: in-memory email inbox ───────────────────────────────────
+const { getDevEmails } = require('./utils/email');
+app.get('/api/dev/emails', function (req, res) {
+  const isDev = process.env.NODE_ENV !== 'production' || !process.env.SMTP_HOST;
+  if (!isDev) {
+    return res.status(403).json({ message: 'Not available in production' });
+  }
+  res.json({ emails: getDevEmails() });
+});
+
 app.use(notFound);
 app.use(errorHandler);
 

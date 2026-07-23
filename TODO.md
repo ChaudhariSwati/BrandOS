@@ -1,28 +1,26 @@
-# Login Page Fix - Task List ✅ COMPLETED
+# Password Reset Email Fix - Implementation Plan
 
-## Issues Identified & Fixed
-1. ✅ **Server crashes on startup** - `seedDemoData()` failure crashed the server
-2. ✅ **Login returned 500** - No DB fallback handling in auth controller
-3. ✅ **Stale process** - Killed and restarted properly
+## Problem
+Forgot password emails are logged to server console in dev mode instead of being sent.
 
-## Fixes Applied
+## Steps
 
-### `server/src/config/db.js`
-- Wrapped `seedDemoData()` in try-catch so seed failure doesn't crash the server
-- Removed `process.exit(1)` from `connectInMemory()` error handler
-- Fixed demo user passwords to meet `minlength: 8` requirement (`demo123` → `Demo@123`)
-- Server now starts gracefully even if DB seeding fails
+### ✅ 1. Update `server/src/utils/email.js`
+- Added in-memory dev email store (`devEmailStore`)
+- In dev mode, emails are captured in the store and logged to console
+- Added `getDevEmails()` and `clearDevEmails()` export functions
 
-### `server/src/controllers/authController.js`
-- Added `isDbConnected()` helper to check MongoDB connectivity
-- Added DB connection guard in signup endpoint — returns 503 with clear message instead of 500
-- Server now returns proper error responses instead of crashing
+### ✅ 2. Update `server/src/index.js`
+- Added dev-only route `GET /api/dev/emails` to retrieve captured emails (protected by NODE_ENV check)
 
-## Test Results
-| Test | Result |
-|------|--------|
-| Demo login `POST /api/demo/login` | ✅ 200 - Works |
-| Auth login `POST /api/auth/login` | ✅ No more 500 - returns 401 for invalid credentials |
-| Signup `POST /api/auth/signup` | ✅ 201 - Creates user & org successfully |
-| Login with correct credentials | ✅ Works after signup |
+### ✅ 3. Update `client/src/api/auth.js`
+- Added `getDevEmails()` API function
+
+### ✅ 4. Update `client/src/pages/ForgotPasswordPage.jsx`
+- Added "Dev Mail Inbox" panel that appears after sending a reset request
+- Shows captured reset links with clickable URLs
+- Includes refresh button to fetch latest emails
+
+### ✅ 5. Restart server and test
+Both server (port 5000) and client (port 5173) are running. The dev mail inbox feature is now available.
 

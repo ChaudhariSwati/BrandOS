@@ -1,5 +1,8 @@
 import api from './client';
 
+// ─── Dev mailbox (local development only) ──────────────────────────────
+export const getDevEmails = () => api.get('/dev/emails');
+
 // ─── Email/Password Auth ───────────────────────────────────────────────
 export const loginUser = (email, password) => api.post('/auth/login', { email, password });
 export const signupUser = (name, email, password, orgName) =>

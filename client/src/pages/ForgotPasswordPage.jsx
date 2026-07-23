@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { forgotPassword as forgotPasswordApi } from '../api/auth';
+import { forgotPassword as forgotPasswordApi, getDevEmails } from '../api/auth';
 import SuccessCard from '../components/ui/SuccessCard';
 
 export default function ForgotPasswordPage() {
@@ -9,6 +9,29 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+
+  // ─── Dev mailbox state ───────────────────────────────────────────────
+  const [devInboxOpen, setDevInboxOpen] = useState(false);
+  const [devEmails, setDevEmails] = useState([]);
+  const [devLoading, setDevLoading] = useState(false);
+
+  const fetchDevEmails = async () => {
+    setDevLoading(true);
+    try {
+      const { data } = await getDevEmails();
+      setDevEmails(data.emails || []);
+    } catch {
+      setDevEmails([]);
+    } finally {
+      setDevLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (devInboxOpen) fetchDevEmails();
+  }, [devInboxOpen]);
+
+  // ─────────────────────────────────────────────────────────────────────
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,6 +61,12 @@ export default function ForgotPasswordPage() {
     }
   };
 
+  // Extract reset URL from email text
+  const extractResetUrl = (text) => {
+    const match = text.match(/https?:\/\/[^\s]+reset-password\/[^\s]+/);
+    return match ? match[0] : null;
+  };
+
   return (
     <div className="auth-page">
       <div className="auth-card">
@@ -58,6 +87,109 @@ export default function ForgotPasswordPage() {
                 secondaryLabel="Send again"
                 onSecondary={() => setSent(false)}
               />
+
+              {/* Dev mailbox toggle */}
+              <div style={{ marginTop: '24px', textAlign: 'center' }}>
+                <button
+                  onClick={() => setDevInboxOpen(!devInboxOpen)}
+                  style={{
+                    background: 'none',
+                    border: '2px dashed #555',
+                    color: '#888',
+                    padding: '8px 16px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {devInboxOpen ? '− Close Dev Mail Inbox' : '+ Dev Mail Inbox (local only)'}
+                </button>
+              </div>
+
+              {devInboxOpen && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  style={{
+                    marginTop: '16px',
+                    padding: '16px',
+                    background: '#1a1a1a',
+                    border: '2px solid #333',
+                    borderRadius: '8px',
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <strong style={{ color: '#ff4d4d', fontSize: '13px' }}>📬 Dev Mail Inbox</strong>
+                    <button
+                      onClick={fetchDevEmails}
+                      style={{
+                        background: 'none',
+                        border: '1px solid #555',
+                        color: '#aaa',
+                        padding: '4px 10px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      {devLoading ? '⟳' : '↻ Refresh'}
+                    </button>
+                  </div>
+
+                  {devEmails.length === 0 ? (
+                    <p style={{ color: '#666', fontSize: '13px', textAlign: 'center', padding: '16px 0' }}>
+                      {devLoading ? 'Loading…' : 'No emails captured yet. Send a reset request first.'}
+                    </p>
+                  ) : (
+                    devEmails.map((mail) => {
+                      const resetUrl = extractResetUrl(mail.text);
+                      return (
+                        <div
+                          key={mail.id}
+                          style={{
+                            padding: '12px',
+                            marginBottom: '8px',
+                            background: '#252525',
+                            borderRadius: '6px',
+                            border: '1px solid #333',
+                          }}
+                        >
+                          <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
+                            To: <span style={{ color: '#aaa' }}>{mail.to}</span>
+                            {' · '}
+                            {new Date(mail.sentAt).toLocaleTimeString()}
+                          </div>
+                          <div style={{ fontSize: '13px', color: '#ccc', marginBottom: '4px' }}>
+                            {mail.subject}
+                          </div>
+                          {resetUrl ? (
+                            <a
+                              href={resetUrl}
+                              style={{
+                                display: 'inline-block',
+                                fontSize: '12px',
+                                color: '#ff4d4d',
+                                wordBreak: 'break-all',
+                                marginTop: '4px',
+                              }}
+                            >
+                              🔗 {resetUrl}
+                            </a>
+                          ) : (
+                            <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                              {mail.text?.slice(0, 200)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </motion.div>
+              )}
             </motion.div>
           ) : (
             <motion.div
