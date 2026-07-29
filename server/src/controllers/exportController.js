@@ -1,6 +1,10 @@
+
+
+
 const Asset = require('../models/Asset');
 const BrandKit = require('../models/BrandKit');
 const Organization = require('../models/Organization');
+const PDFDocument = require('pdfkit');
 
 // POST /api/export/render-card — renders a card asset to PNG via Puppeteer
 const renderCard = async (req, res, next) => {
@@ -24,7 +28,7 @@ const renderCard = async (req, res, next) => {
 
     // Check monthly export limit for free tier
     const org = await Organization.findById(req.orgId);
-    if (org.tier === 'free') {
+    if (org && org.tier === 'free') {
       const thisMonth = new Date();
       thisMonth.setDate(1);
       thisMonth.setHours(0, 0, 0, 0);
@@ -57,14 +61,12 @@ const renderCard = async (req, res, next) => {
       const screenshot = await page.screenshot({ type: 'png' });
       const base64 = screenshot.toString('base64');
 
-      // Save exportUrl as data URI for now (in production, upload to Cloudinary)
       const dataUri = `data:image/png;base64,${base64}`;
       asset.exportUrl = dataUri;
       await asset.save();
 
       res.json({ exportUrl: dataUri, assetId: asset._id });
     } catch (puppeteerErr) {
-      // Fallback: return a placeholder image URL
       console.warn('Puppeteer render failed, returning placeholder:', puppeteerErr.message);
       res.json({
         exportUrl: `https://placehold.co/${dimensions.width}x${dimensions.height}?text=Render+Unavailable`,
@@ -103,7 +105,7 @@ const renderPdf = async (req, res, next) => {
     if (asset.type === 'invoice') {
       html = buildInvoiceHtml(kit, elements, canvasData);
     } else {
-      html = buildLetterheadHtml(kit, elements);
+      html = buildLetterheadHtml(kit, elements, canvasData);
     }
 
     if (typeof html !== 'string' || !html.trim()) {
@@ -124,12 +126,10 @@ const renderPdf = async (req, res, next) => {
           '--disable-gpu',
           '--font-render-hinting=none',
         ],
-        // Helps in some restricted/containerized environments
         timeout: 60_000,
       });
 
       const page = await browser.newPage();
-      // Increase robustness if fonts/images load slowly
       await page.setContent(html, { waitUntil: 'networkidle0', timeout: 60_000 });
       await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 2 });
 
@@ -147,15 +147,74 @@ const renderPdf = async (req, res, next) => {
       res.json({ exportUrl: dataUri, assetId: asset._id });
     } catch (puppeteerErr) {
       console.warn('Puppeteer PDF render failed:', puppeteerErr?.message);
+      // Return error info so client can try the streaming fallback
       res.json({
         exportUrl: '',
         assetId: asset._id,
-        note: 'PDF rendering failed on the server.',
+        note: 'PDF rendering failed on the server. Use direct download endpoint instead.',
         error: puppeteerErr?.message || String(puppeteerErr),
+        fallbackAvailable: true,
       });
     } finally {
       if (browser) await browser.close();
     }
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/export/download/:assetId — streams PDF directly for download (no Chromium needed)
+const downloadAsset = async (req, res, next) => {
+  try {
+    const { assetId } = req.params;
+    if (!assetId) {
+      res.status(400);
+      throw new Error('assetId is required');
+    }
+
+    const asset = await Asset.findOne({ _id: assetId, org: req.orgId }).populate('brandKit');
+    if (!asset) {
+      res.status(404);
+      throw new Error('Asset not found');
+    }
+
+    const kit = asset.brandKit;
+    const canvasData = asset.data || {};
+    const elements = canvasData.elements || [];
+
+    // Set response headers for PDF download
+    const filename = encodeURIComponent(asset.name.replace(/[^a-zA-Z0-9 _-]/g, '')) + '.pdf';
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${asset.name.replace(/[^a-zA-Z0-9 _-]/g, '')}.pdf"; filename*=UTF-8''${filename}`);
+
+    // Generate PDF with pdfkit (pure JS, works everywhere)
+    const doc = new PDFDocument({
+      size: 'A4',
+      margins: { top: 40, right: 40, bottom: 40, left: 40 },
+      info: {
+        Title: asset.name,
+        Author: 'BrandOS',
+      },
+    });
+
+    doc.pipe(res);
+
+    // Brand colors
+    const bgColor = kit?.colors?.[0] || '#FFFFFF';
+    const accentColor = kit?.colors?.[1] || '#1A1A1A';
+    const headingFont = kit?.fonts?.heading || 'Helvetica-Bold';
+    const bodyFont = kit?.fonts?.body || 'Helvetica';
+
+    if (asset.type === 'invoice') {
+      buildInvoicePdf(doc, kit, elements, canvasData, bgColor, accentColor, headingFont, bodyFont);
+    } else if (asset.type === 'letterhead') {
+      buildLetterheadPdf(doc, kit, elements, canvasData, bgColor, accentColor, headingFont, bodyFont);
+    } else {
+      // Card type — render a simplified card page
+      buildCardPdf(doc, kit, elements, canvasData, bgColor, accentColor, headingFont, bodyFont);
+    }
+
+    doc.end();
   } catch (err) {
     next(err);
   }
@@ -226,49 +285,68 @@ function buildCardHtml(kit, elements, dimensions) {
 ">${bodyContent}</body></html>`;
 }
 
-function buildLetterheadHtml(kit, elements) {
+function buildLetterheadHtml(kit, elements, data) {
   const bgColor = kit.colors?.[0] || '#FFFFFF';
   const accentColor = kit.colors?.[1] || '#333333';
   const headingFont = kit.fonts?.heading || 'Poppins';
   const bodyFont = kit.fonts?.body || 'Inter';
 
   let bodyContent = '';
-  for (const el of elements || []) {
-    switch (el.type) {
-      case 'text':
-        bodyContent += `<div style="
-          position: absolute;
-          left: ${el.left || 0}px;
-          top: ${el.top || 0}px;
-          font-family: ${el.fontFamily || headingFont};
-          font-size: ${el.fontSize || 16}px;
-          color: ${el.fill || '#000000'};
-          font-weight: ${el.fontWeight || 400};
-          line-height: 1.5;
-          width: ${el.width || 'auto'};
-        ">${el.text || ''}</div>`;
-        break;
-      case 'image':
-        if (el.src) {
-          bodyContent += `<img src="${el.src}" style="
+
+  // If elements array is empty, use the letterhead's header/body/footer fields
+  if (!elements || elements.length === 0) {
+    const header = (data && data.header) || '';
+    const body = (data && data.body) || '';
+    const footer = (data && data.footer) || '';
+
+    if (header) {
+      bodyContent += `<div style="font-family:${headingFont};font-size:18px;font-weight:700;margin-bottom:24px;border-bottom:2px solid ${accentColor};padding-bottom:12px;white-space:pre-line;">${header}</div>`;
+    }
+    if (body) {
+      bodyContent += `<div style="font-family:${bodyFont};font-size:14px;line-height:1.8;white-space:pre-line;min-height:400px;">${body}</div>`;
+    }
+    if (footer) {
+      bodyContent += `<div style="font-family:${bodyFont};font-size:12px;color:#888;margin-top:48px;border-top:2px solid ${accentColor};padding-top:12px;white-space:pre-line;">${footer}</div>`;
+    }
+  } else {
+    // Use elements array format (from canvas-based editor)
+    for (const el of elements || []) {
+      switch (el.type) {
+        case 'text':
+          bodyContent += `<div style="
             position: absolute;
             left: ${el.left || 0}px;
             top: ${el.top || 0}px;
-            width: ${el.width || 150}px;
-            height: ${el.height || 60}px;
-          " />`;
-        }
-        break;
-      case 'line':
-        bodyContent += `<div style="
-          position: absolute;
-          left: ${el.left || 0}px;
-          top: ${el.top || 0}px;
-          width: ${el.width || 700}px;
-          height: 2px;
-          background: ${accentColor};
-        "></div>`;
-        break;
+            font-family: ${el.fontFamily || headingFont};
+            font-size: ${el.fontSize || 16}px;
+            color: ${el.fill || '#000000'};
+            font-weight: ${el.fontWeight || 400};
+            line-height: 1.5;
+            width: ${el.width || 'auto'};
+          ">${el.text || ''}</div>`;
+          break;
+        case 'image':
+          if (el.src) {
+            bodyContent += `<img src="${el.src}" style="
+              position: absolute;
+              left: ${el.left || 0}px;
+              top: ${el.top || 0}px;
+              width: ${el.width || 150}px;
+              height: ${el.height || 60}px;
+            " />`;
+          }
+          break;
+        case 'line':
+          bodyContent += `<div style="
+            position: absolute;
+            left: ${el.left || 0}px;
+            top: ${el.top || 0}px;
+            width: ${el.width || 700}px;
+            height: 2px;
+            background: ${accentColor};
+          "></div>`;
+          break;
+      }
     }
   }
 
@@ -278,10 +356,8 @@ function buildLetterheadHtml(kit, elements) {
   <style>*{margin:0;padding:0;box-sizing:border-box;}</style>
 </head><body style="
   width: 1240px;
-  height: 1754px;
+  min-height: 1754px;
   background: ${bgColor};
-  position: relative;
-  overflow: hidden;
   font-family: ${bodyFont}, sans-serif;
   padding: 60px;
 ">${bodyContent}</body></html>`;
@@ -389,4 +465,128 @@ function buildInvoiceHtml(kit, elements, data) {
 </body></html>`;
 }
 
-module.exports = { renderCard, renderPdf };
+// ─── PDF Builder Functions (PDFKit) ──────────────────────────────────────
+
+/**
+ * Build an invoice PDF using PDFKit.
+ */
+function buildInvoicePdf(doc, kit, elements, data, bgColor, accentColor, headingFont, bodyFont) {
+  const invoiceData = data.invoiceData || {};
+  const lineItems = invoiceData.lineItems || [];
+  const gstin = invoiceData.gstin || '';
+  const hsnCodes = invoiceData.hsnCodes || '';
+  const isGstEnabled = invoiceData.isGstEnabled !== false;
+
+  // Title
+  doc.fontSize(24).font(headingFont).fillColor('#000').text('INVOICE', { align: 'center' });
+  doc.moveDown(0.5);
+
+  // GSTIN
+  if (gstin && isGstEnabled) {
+    doc.fontSize(10).font(bodyFont).fillColor('#666').text(`GSTIN: ${gstin}`, { align: 'center' });
+    doc.moveDown(0.3);
+  }
+
+  // Line items table header
+  doc.moveDown(1);
+  doc.fontSize(10).font(headingFont).fillColor('#fff');
+  doc.rect(doc.x, doc.y, 500, 20).fill(accentColor);
+
+  const colX = [40, 110, 280, 340, 410];
+  const headers = ['#', 'Description', 'Qty', 'Rate', 'Amount'];
+  doc.fillColor('#fff');
+  headers.forEach((h, i) => {
+    doc.text(h, colX[i], doc.y - 15, { width: 80, align: i >= 2 ? 'right' : 'left' });
+  });
+  doc.moveDown(1);
+
+  // Line items
+  let subtotal = 0;
+  doc.fontSize(10).font(bodyFont).fillColor('#000');
+  lineItems.forEach((item, i) => {
+    const amount = (item.quantity || 0) * (item.rate || 0);
+    subtotal += amount;
+    const y = doc.y;
+    doc.text(String(i + 1), colX[0], y);
+    doc.text(item.description || '', colX[1], y, { width: 160 });
+    doc.text(String(item.quantity || 0), colX[2], y, { width: 60, align: 'right' });
+    doc.text(`₹${(item.rate || 0).toFixed(2)}`, colX[3], y, { width: 70, align: 'right' });
+    doc.text(`₹${amount.toFixed(2)}`, colX[4], y, { width: 70, align: 'right' });
+    doc.moveDown(1.2);
+  });
+
+  // Totals
+  doc.moveDown(1);
+  const cgst = isGstEnabled ? subtotal * 0.09 : 0;
+  const sgst = isGstEnabled ? subtotal * 0.09 : 0;
+  const grandTotal = subtotal + cgst + sgst;
+
+  doc.fontSize(11).font(bodyFont);
+  doc.text(`Subtotal: ₹${subtotal.toFixed(2)}`, { align: 'right' });
+  if (isGstEnabled) {
+    doc.text(`CGST (9%): ₹${cgst.toFixed(2)}`, { align: 'right' });
+    doc.text(`SGST (9%): ₹${sgst.toFixed(2)}`, { align: 'right' });
+  }
+  doc.fontSize(16).font(headingFont).fillColor(accentColor);
+  doc.text(`Total: ₹${grandTotal.toFixed(2)}`, { align: 'right' });
+}
+
+/**
+ * Build a letterhead PDF using PDFKit.
+ */
+function buildLetterheadPdf(doc, kit, elements, data, bgColor, accentColor, headingFont, bodyFont) {
+  const header = (data && data.header) || '';
+  const body = (data && data.body) || '';
+  const footer = (data && data.footer) || '';
+
+  if (header) {
+    doc.fontSize(16).font(headingFont).fillColor('#000');
+    doc.text(header, { align: 'left' });
+    doc.moveDown(0.5);
+    doc.moveTo(doc.x, doc.y).lineTo(doc.x + 500, doc.y).strokeColor(accentColor).stroke();
+    doc.moveDown(1);
+  }
+
+  if (body) {
+    doc.fontSize(12).font(bodyFont).fillColor('#000');
+    doc.text(body, { align: 'left', lineGap: 6 });
+  }
+
+  if (footer) {
+    doc.moveDown(3);
+    doc.moveTo(doc.x, doc.y).lineTo(doc.x + 500, doc.y).strokeColor(accentColor).stroke();
+    doc.moveDown(0.5);
+    doc.fontSize(10).font(bodyFont).fillColor('#888');
+    doc.text(footer, { align: 'center' });
+  }
+}
+
+/**
+ * Build a simplified card PDF using PDFKit.
+ */
+function buildCardPdf(doc, kit, elements, data, bgColor, accentColor, headingFont, bodyFont) {
+  // Title
+  doc.fontSize(24).font(headingFont).fillColor(accentColor);
+  doc.text('BrandOS Card Export', { align: 'center' });
+  doc.moveDown(1);
+
+  doc.fontSize(12).font(bodyFont).fillColor('#000');
+  if (elements && elements.length > 0) {
+    elements.forEach((el) => {
+      if (el.type === 'text') {
+        doc.fontSize(el.fontSize || 16).font(el.fontFamily || headingFont).fillColor(el.fill || '#000');
+        doc.text(el.text || '', { align: 'center' });
+        doc.moveDown(0.5);
+      }
+    });
+  } else {
+    doc.text('Card content not available for direct PDF export.', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.fontSize(10).fillColor('#888');
+    doc.text('Use the "Export" button for a full rendered version.', { align: 'center' });
+  }
+}
+
+module.exports = { renderCard, renderPdf, downloadAsset };
+
+

@@ -18,11 +18,11 @@ function isDbConnected() {
   return mongoose.connection.readyState === 1;
 }
 
-// Google OAuth client — initialized lazily so missing env var doesn't crash the server
+// Google OAuth client — supports both GOOGLE_CLIENT_ID and VITE_GOOGLE_CLIENT_ID
 let googleClient = null;
 function getGoogleClient() {
   if (!googleClient) {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
     if (clientId) {
       googleClient = new OAuth2Client(clientId);
     }
@@ -247,9 +247,10 @@ const googleAuth = async (req, res) => {
 
   let payload;
   try {
+    const audience = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
     const ticket = await client.verifyIdToken({
       idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: audience,
     });
     payload = ticket.getPayload();
   } catch (err) {
@@ -317,3 +318,6 @@ const googleAuth = async (req, res) => {
 };
 
 module.exports = { signup, login, googleAuth, refresh, logout, getMe };
+</｜｜DSML｜｜parameter>
+</｜｜DSML｜｜invoke>
+</｜｜DSML｜｜tool_calls>

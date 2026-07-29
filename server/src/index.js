@@ -1,3 +1,5 @@
+
+
 require('express-async-errors');
 const express = require('express');
 const cors = require('cors');
@@ -23,14 +25,16 @@ app.set('trust proxy', 1);
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginOpenerPolicy: { policy: 'unsafe-none' },
   contentSecurityPolicy: NODE_ENV === 'production' ? {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com', 'https://apis.google.com'],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:', 'http:'],
-      connectSrc: ["'self'", 'https://fonts.googleapis.com'],
+      connectSrc: ["'self'", 'https://fonts.googleapis.com', 'https://accounts.google.com'],
+      frameSrc: ["'self'", 'https://accounts.google.com'],
     },
   } : false,
 }));
@@ -46,7 +50,6 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (server-to-server, curl, etc.)
     if (!origin) return callback(null, true);
     const allowed = allowedOrigins.some(function (o) {
       if (o instanceof RegExp) return o.test(origin);
@@ -54,7 +57,7 @@ app.use(cors({
     });
     if (allowed) return callback(null, true);
     console.warn('CORS blocked origin:', origin);
-    return callback(null, true); // Allow anyway for public API access
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -109,7 +112,7 @@ app.use('/api/assets', require('./routes/assetRoutes'));
 app.use('/api/export', require('./routes/exportRoutes'));
 app.use('/api/demo', require('./routes/demoRoutes'));
 
-// ─── Dev-only: in-memory email inbox ───────────────────────────────────
+// Dev-only: in-memory email inbox
 const { getDevEmails } = require('./utils/email');
 app.get('/api/dev/emails', function (req, res) {
   const isDev = process.env.NODE_ENV !== 'production' || !process.env.SMTP_HOST;
@@ -122,13 +125,34 @@ app.get('/api/dev/emails', function (req, res) {
 app.use(notFound);
 app.use(errorHandler);
 
-// Start server first, then connect DB asynchronously
-var server = app.listen(PORT, function () {
-  console.log('  Server running on port ' + PORT);
-  console.log('  Environment: ' + NODE_ENV);
-  console.log('  Client URL: ' + CLIENT_URL);
-  console.log('');
-});
+// Try to start server, with port fallback loop
+function startServer(port) {
+  var srv = app.listen(port);
+  srv.on('listening', function () {
+    console.log('  Server running on port ' + port);
+    console.log('  Environment: ' + NODE_ENV);
+    console.log('  Client URL: ' + CLIENT_URL);
+    console.log('');
+  });
+  srv.on('error', function (err) {
+    if (err.code === 'EADDRINUSE') {
+      var nextPort = port + 1;
+      if (nextPort > port + 10) {
+        console.error('  Could not find an available port after 10 attempts. Please close other processes.');
+        process.exit(1);
+      }
+      console.warn('  Port ' + port + ' is in use, trying ' + nextPort + '...');
+      srv.close();
+      server = startServer(nextPort);
+    } else {
+      console.error('  Server error:', err.message);
+      process.exit(1);
+    }
+  });
+  return srv;
+}
+
+var server = startServer(PORT);
 
 connectDB().catch(function () {
   console.warn('MongoDB unavailable – demo endpoints still work');

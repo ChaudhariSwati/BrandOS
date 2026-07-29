@@ -78,9 +78,6 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Index for fast lookups
-userSchema.index({ email: 1 });
-
 // Hash password before saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
@@ -105,4 +102,3 @@ userSchema.methods.toJSON = function () {
 };
 
 module.exports = mongoose.model('User', userSchema);
-

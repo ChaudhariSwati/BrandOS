@@ -44,9 +44,20 @@ const exportLimiter = rateLimit({
   legacyHeaders: false,
   validate: { xForwardedForHeader: false },
   message: { message: 'Export rate limit reached. Please wait before exporting again.' },
-  skip: (req) => {
-    // Allow pro tier users higher limits (checked via org tier in req.user)
-    return req.user?.tier === 'pro';
+  skip: async (req) => {
+    // Allow pro tier users higher limits (checked via DB lookup)
+    // req.user.org is typically just an ObjectId / string, not populated
+    if (req.user?.isDemo) return true; // Demo users are always pro
+    if (req.orgId) {
+      try {
+        const Organization = require('../models/Organization');
+        const org = await Organization.findById(req.orgId).select('tier').lean();
+        return org?.tier === 'pro';
+      } catch {
+        // If DB lookup fails, fall through to rate limit
+      }
+    }
+    return false;
   },
 });
 
