@@ -3,11 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import GoogleButton from '../components/auth/GoogleButton';
-import PasskeyButton from '../components/auth/PasskeyButton';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, googleLogin, demoLogin, loginWithPasskey, showToast } = useAuth();
+  const { login, googleLogin, demoLogin, showToast } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -16,7 +15,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
-  const [passkeyLoading, setPasskeyLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,7 +29,6 @@ export default function LoginPage() {
     try {
       const result = await login(email.trim().toLowerCase(), password);
 
-      // Check if 2FA is required
       if (result?.requires2FA) {
         navigate('/2fa', { state: { tempToken: result.tempToken } });
         return;
@@ -63,20 +60,6 @@ export default function LoginPage() {
 
   const handleGoogleError = (err) => {
     setError(err?.message || 'Google sign-in failed');
-  };
-
-  const handlePasskeyLogin = async () => {
-    setPasskeyLoading(true);
-    setError('');
-    try {
-      await loginWithPasskey(email || undefined);
-      showToast('Signed in with passkey!', 'success');
-      navigate('/', { replace: true });
-    } catch (err) {
-      setError(err.message || 'Passkey sign-in failed');
-    } finally {
-      setPasskeyLoading(false);
-    }
   };
 
   const handleDemo = async () => {
@@ -119,7 +102,6 @@ export default function LoginPage() {
             </motion.div>
           )}
 
-          {/* Google Sign-In */}
           <div style={{ marginBottom: '12px' }}>
             <GoogleButton
               onSuccess={handleGoogleSuccess}
@@ -127,16 +109,6 @@ export default function LoginPage() {
               loading={googleLoading}
               disabled={loading || demoLoading}
               text="signin_with"
-            />
-          </div>
-
-          {/* Passkey Sign-In */}
-          <div style={{ marginBottom: '12px' }}>
-            <PasskeyButton
-              onLogin={handlePasskeyLogin}
-              loading={passkeyLoading}
-              disabled={loading || demoLoading || googleLoading}
-              mode="login"
             />
           </div>
 
@@ -219,7 +191,7 @@ export default function LoginPage() {
               {loading ? (
                 <span className="btn-loading-spinner" />
               ) : null}
-              {loading ? 'Signing in…' : 'Sign In'}
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
@@ -231,15 +203,14 @@ export default function LoginPage() {
             onClick={handleDemo}
             disabled={demoLoading || loading}
           >
-            {demoLoading ? 'Loading demo…' : '🚀 Try Demo'}
+            {demoLoading ? 'Loading demo...' : 'Try Demo'}
           </button>
 
           <p className="auth-alt">
-            Don't have an account? <Link to="/signup">Sign up</Link>
+            Don&apos;t have an account? <Link to="/signup">Sign up</Link>
           </p>
         </motion.div>
       </div>
     </div>
   );
 }
-

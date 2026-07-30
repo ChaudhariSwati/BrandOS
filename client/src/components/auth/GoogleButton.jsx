@@ -1,8 +1,41 @@
-import { useRef, useEffect } from 'react';
+
+import { useRef, useEffect, useCallback } from 'react';
 
 export default function GoogleButton({ onSuccess, onError, loading, disabled, text = 'signin_with' }) {
   const buttonRef = useRef(null);
+  const initializedRef = useRef(false);
+  const callbacksRef = useRef({ onSuccess, onError });
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  // Keep callbacks in ref to avoid re-initialization on every render
+  callbacksRef.current = { onSuccess, onError };
+
+  const initializeGIS = useCallback(() => {
+    if (initializedRef.current || !window.google?.accounts?.id || !buttonRef.current) return;
+    
+    initializedRef.current = true;
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: (response) => {
+        if (response?.credential) {
+          callbacksRef.current.onSuccess?.(response.credential);
+        } else {
+          callbacksRef.current.onError?.(new Error('Google sign-in failed'));
+        }
+      },
+      cancel_on_tap_outside: true,
+    });
+    
+    window.google.accounts.id.renderButton(buttonRef.current, {
+      type: 'standard',
+      shape: 'rectangular',
+      theme: 'outline',
+      text,
+      size: 'large',
+      width: '320',
+      logo_alignment: 'left',
+    });
+  }, [GOOGLE_CLIENT_ID, text]);
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID || !buttonRef.current) return;
@@ -18,38 +51,12 @@ export default function GoogleButton({ onSuccess, onError, loading, disabled, te
       return () => {
         const existing = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
         if (existing) existing.remove();
+        initializedRef.current = false;
       };
     } else {
       initializeGIS();
     }
-
-    function initializeGIS() {
-      if (window.google?.accounts?.id) {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: (response) => {
-            if (response?.credential) {
-              onSuccess?.(response.credential);
-            } else {
-              onError?.(new Error('Google sign-in failed'));
-            }
-          },
-          cancel_on_tap_outside: true,
-        });
-        if (buttonRef.current) {
-          window.google.accounts.id.renderButton(buttonRef.current, {
-            type: 'standard',
-            shape: 'rectangular',
-            theme: 'outline',
-            text,
-            size: 'large',
-            width: '320',
-            logo_alignment: 'left',
-          });
-        }
-      }
-    }
-  }, [GOOGLE_CLIENT_ID, onSuccess, onError, text]);
+  }, [GOOGLE_CLIENT_ID, initializeGIS]);
 
   if (!GOOGLE_CLIENT_ID) return null;
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { listBrandKits } from '../api/brandkits';
-import { getAsset, createAsset, updateAsset, renderPdf } from '../api/assets';
+import { getAsset, createAsset, updateAsset, renderPdf, downloadAsset } from '../api/assets';
 
 export default function InvoiceEditor() {
   const { id } = useParams();

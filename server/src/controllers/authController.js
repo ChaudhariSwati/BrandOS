@@ -274,7 +274,7 @@ const googleAuth = async (req, res) => {
     user = await User.create({
       name: name || email.split('@')[0],
       email,
-      password: crypto.randomBytes(24).toString('hex'), // Random password (user logs in via Google)
+      password: crypto.randomBytes(24).toString('hex'),
       googleId,
       role: 'owner',
     });
@@ -318,6 +318,3 @@ const googleAuth = async (req, res) => {
 };
 
 module.exports = { signup, login, googleAuth, refresh, logout, getMe };
-</｜｜DSML｜｜parameter>
-</｜｜DSML｜｜invoke>
-</｜｜DSML｜｜tool_calls>

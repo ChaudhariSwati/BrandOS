@@ -1,77 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { listAssets, deleteAsset, renderCard, renderPdf, downloadAsset } from '../api/assets';
+const fs = require('fs');
+const path = 'c:/Users/kumar/OneDrive/Desktop/BrandOS/client/src/pages/Assets.jsx';
+let c = fs.readFileSync(path, 'utf8');
 
-export default function Assets() {
-  const navigate = useNavigate();
-  const [assets, setAssets] = useState([]);
-  const [filter, setFilter] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [exporting, setExporting] = useState(null);
-
-  const load = () => {
-    setLoading(true);
-    listAssets(filter || undefined)
-      .then(({ data }) => setAssets(data))
-      .catch(() => setError('Failed to load assets'))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(load, [filter]);
-
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this asset?')) return;
-    try { await deleteAsset(id); load(); }
-    catch { setError('Delete failed'); }
-  };
-
-  const handleExport = async (asset) => {
-    setExporting(asset._id);
-    setError('');
-    try {
-      if (asset.type === 'card') {
-        const res = await renderCard(asset._id);
-        if (res.data.exportUrl) {
-          const filename = asset.name + '.png';
-          const link = document.createElement('a');
-          link.href = res.data.exportUrl;
-          link.download = filename;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        } else {
-          setError(res.data?.note || 'Card export not available');
-        }
-      } else {
-        try {
-          const filename = asset.name + '.pdf';
-          await downloadAsset(asset._id, filename);
-        } catch (downloadErr) {
-          const res = await renderPdf(asset._id);
-          if (res.data.exportUrl) {
-            const filename = asset.name + '.pdf';
-            const link = document.createElement('a');
-            link.href = res.data.exportUrl;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          } else {
-            setError(res.data?.note || downloadErr.message || 'Export failed');
-          }
-        }
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Export failed');
-    } finally {
-      setExporting(null);
-    }
-  };
-
-  if (loading) return <div className="loading">Loading...</div>;
-
-  return (
+// Replace the entire return statement block
+const oldReturn = c.substring(c.indexOf('return ('));
+const newReturn = `return (
     <div>
       <div className="page-header">
         <h1 className="page-title">Assets</h1>
@@ -83,8 +16,6 @@ export default function Assets() {
             <option value="invoice">Invoices</option>
           </select>
         </div>
-      </div>
-
       {error && <div className="error">{error}</div>}
 
       {assets.length === 0 ? (
@@ -96,7 +27,6 @@ export default function Assets() {
             <Link to="/assets/letterhead/new" className="btn btn-secondary">New Letterhead</Link>
             <Link to="/assets/invoice/new" className="btn btn-secondary">New Invoice</Link>
           </div>
-        </div>
       ) : (
         <div className="card">
           <div className="table-wrap">
@@ -133,9 +63,11 @@ export default function Assets() {
               </tbody>
             </table>
           </div>
-        </div>
       )}
     </div>
   );
-}
+}`;
 
+c = c.replace(oldReturn, newReturn);
+fs.writeFileSync(path, c);
+console.log('Fixed successfully');

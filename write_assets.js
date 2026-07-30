@@ -1,4 +1,7 @@
-import { useState, useEffect } from 'react';
+const fs = require('fs');
+const path = 'c:/Users/kumar/OneDrive/Desktop/BrandOS/client/src/pages/Assets.jsx';
+
+const content = `import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { listAssets, deleteAsset, renderCard, renderPdf, downloadAsset } from '../api/assets';
 
@@ -83,8 +86,6 @@ export default function Assets() {
             <option value="invoice">Invoices</option>
           </select>
         </div>
-      </div>
-
       {error && <div className="error">{error}</div>}
 
       {assets.length === 0 ? (
@@ -96,7 +97,6 @@ export default function Assets() {
             <Link to="/assets/letterhead/new" className="btn btn-secondary">New Letterhead</Link>
             <Link to="/assets/invoice/new" className="btn btn-secondary">New Invoice</Link>
           </div>
-        </div>
       ) : (
         <div className="card">
           <div className="table-wrap">
@@ -133,9 +133,11 @@ export default function Assets() {
               </tbody>
             </table>
           </div>
-        </div>
       )}
     </div>
   );
 }
+`;
 
+fs.writeFileSync(path, content, 'utf8');
+console.log('Assets.jsx written successfully. Length:', content.length);
