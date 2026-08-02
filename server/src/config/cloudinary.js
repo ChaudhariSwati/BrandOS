@@ -1,10 +1,16 @@
 const cloudinary = require('cloudinary').v2;
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Safe config — missing/partial credentials should NOT throw at module load.
+// Export endpoints check isConfigured() and gracefully fall back.
+try {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+} catch (err) {
+  console.warn('[Cloudinary] Config failed at load:', err.message);
+}
 
 /**
  * Validate that Cloudinary is actually configured with real credentials.

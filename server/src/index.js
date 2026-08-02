@@ -1,5 +1,24 @@
 
 
+
+// ─── Early, visible crash logging ─────────────────────────────────────
+// MUST be registered before any module requires below so that even a
+// load-time crash (bad require, native module failure, etc.) is printed
+// to stderr and becomes visible in Render's log viewer.
+// Only exit hard if the crash happens BEFORE the server starts listening;
+// after startup we defer to the resilient handler further down the file.
+var serverStarted = false;
+process.on('uncaughtException', function (err) {
+  console.error('[FATAL uncaughtException]', err && err.stack ? err.stack : err);
+  if (!serverStarted) process.exit(1);
+});
+process.on('unhandledRejection', function (reason) {
+  console.error('[FATAL unhandledRejection]', reason && reason.stack ? reason.stack : reason);
+  if (!serverStarted) process.exit(1);
+});
+
+console.log('[BrandOS] Starting server... PID=' + process.pid + ' NODE_ENV=' + (process.env.NODE_ENV || 'development') + ' Node=' + process.version);
+
 require('express-async-errors');
 const path = require('path');
 const express = require('express');
@@ -130,6 +149,7 @@ app.use(errorHandler);
 function startServer(port) {
   var srv = app.listen(port);
   srv.on('listening', function () {
+    serverStarted = true;
     console.log('  Server running on port ' + port);
     console.log('  Environment: ' + NODE_ENV);
     console.log('  Client URL: ' + CLIENT_URL);

@@ -52,10 +52,10 @@ const logger = winston.createLogger({
   exitOnError: false,
 });
 
-// In non-production, also log to the console
-if (NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({ format: consoleFormat }));
-}
+// Always log to the console as well (production included).
+// On platforms like Render/Vercel, file logs are ephemeral/invisible,
+// so stdout/stderr is the ONLY reliable place to see errors.
+logger.add(new winston.transports.Console({ format: consoleFormat }));
 
 /**
  * Creates a child logger with request-specific metadata.
