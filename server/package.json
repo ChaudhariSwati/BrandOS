@@ -4,10 +4,9 @@
   "description": "BrandOS backend - multi-tenant SaaS for AI-assisted brand identity",
   "main": "src/index.js",
   "type": "commonjs",
-
   "engines": {
-  "node": "20.x"
-},
+    "node": "20.x"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
@@ -20,7 +19,7 @@
     "@google/generative-ai": "^0.24.1",
     "@simplewebauthn/server": "^13.3.2",
     "bcryptjs": "^2.4.3",
-    "cloudinary": "^2.10.0",
+    "cloudinary": "^2.6.0",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
