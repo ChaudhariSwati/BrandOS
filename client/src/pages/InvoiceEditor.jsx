@@ -80,8 +80,14 @@ export default function InvoiceEditor() {
         assetId = data._id;
       }
       const { data } = await renderPdf(assetId);
-      if (data.exportUrl) window.open(data.exportUrl, '_blank');
-      else setError(data?.error || data?.note || 'Export not available');
+      if (data.exportUrl) {
+        window.open(data.exportUrl, '_blank');
+      } else if (data.downloadUrl) {
+        // Cloudinary unavailable — stream the PDF directly as a download.
+        await downloadAsset(assetId, (name || 'invoice') + '.pdf');
+      } else {
+        setError(data?.error || data?.note || 'Export not available');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Export failed');
     } finally { setExporting(false); }

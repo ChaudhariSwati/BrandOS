@@ -1,33 +1,20 @@
 const jwt = require('jsonwebtoken');
-
-// Embedded demo data — used when MongoDB is unavailable
-const DEMO_USER = {
-  _id: '507f1f77bcf86cd799439011',
-  name: 'Demo User',
-  email: 'demo@brandos.io',
-  role: 'owner',
-  org: '507f1f77bcf86cd799439012',
-};
-
-const DEMO_ORG = {
-  _id: '507f1f77bcf86cd799439012',
-  name: 'Acme Corp',
-  tier: 'pro',
-};
+const store = require('../utils/demoStore');
 
 // Get JWT secret with a hardcoded fallback for demo mode
 const getDemoJwtSecret = () => {
   return process.env.JWT_SECRET || 'demo-fallback-secret-brandos-2024';
 };
 
-// POST /api/auth/demo
+// POST /api/demo/login
 const demoLogin = async (req, res) => {
+  const user = store.getDemoUser();
   const secret = getDemoJwtSecret();
   const accessToken = jwt.sign(
     {
-      id: DEMO_USER._id,
-      org: DEMO_USER.org,
-      role: DEMO_USER.role,
+      id: user._id,
+      org: user.org,
+      role: user.role,
       type: 'access',
       isDemo: true,
     },
@@ -36,190 +23,158 @@ const demoLogin = async (req, res) => {
   );
 
   res.json({
-    _id: DEMO_USER._id,
-    name: DEMO_USER.name,
-    email: DEMO_USER.email,
-    role: DEMO_USER.role,
-    org: DEMO_USER.org,
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    org: user.org,
     accessToken,
     isDemo: true,
   });
 };
 
-// GET /api/demo/org — returns demo org data (no DB needed)
+// GET /api/demo/org
 const getDemoOrg = async (req, res) => {
-  res.json(DEMO_ORG);
+  res.json(store.getDemoOrg());
 };
 
-// POST /api/demo/brandkits — create a new brand kit (demo)
-const createDemoBrandKit = async (req, res) => {
-  const { name, colors, fonts, logoUrl } = req.body;
-  const newKit = {
-    _id: '507f1f77bcf86cd799439013',
-    org: DEMO_USER.org,
-    name: name || 'Untitled Brand Kit',
-    colors: colors || [],
-    fonts: fonts || { heading: 'Poppins', body: 'Inter' },
-    logoUrl: logoUrl || '',
-    version: 1,
-    createdBy: DEMO_USER._id,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  res.status(201).json(newKit);
+// PUT /api/demo/org — rename the demo org
+const updateDemoOrg = async (req, res) => {
+  const org = store.getDemoOrg();
+  if (req.body && req.body.name) {
+    org.name = req.body.name;
+  }
+  if (req.body && req.body.tier) {
+    org.tier = req.body.tier;
+  }
+  res.json(org);
 };
 
-// GET /api/demo/brandkits — returns demo brand kit data
+// GET /api/demo/brandkits
 const getDemoBrandKits = async (req, res) => {
-  res.json([
-    {
-      _id: '507f1f77bcf86cd799439013',
-      org: DEMO_USER.org,
-      name: 'Acme Brand Kit',
-      colors: ['#FF4D4D', '#1A1A1A', '#FAFAFA', '#FFD166', '#06D6A0'],
-      fonts: { heading: 'Poppins', body: 'Inter' },
-      logoUrl: 'https://placehold.co/200x80/FF4D4D/FFFFFF?text=ACME',
-      version: 3,
-      createdAt: new Date().toISOString(),
-    },
-  ]);
+  res.json(store.getDemoBrandKits());
 };
 
-// GET /api/demo/assets — returns demo assets
-const getDemoAssets = async (req, res) => {
-  res.json([
-    {
-      _id: '507f1f77bcf86cd799439014',
-      org: DEMO_USER.org,
-      brandKit: { _id: '507f1f77bcf86cd799439013', name: 'Acme Brand Kit', colors: ['#FF4D4D', '#1A1A1A', '#FAFAFA', '#FFD166', '#06D6A0'], fonts: { heading: 'Poppins', body: 'Inter' } },
-      type: 'card',
-      name: 'Welcome Card',
-      data: {
-        dimensions: { width: 1200, height: 675 },
-        elements: [
-          { type: 'rect', left: 0, top: 0, width: 1200, height: 675, fill: '#FF4D4D' },
-          { type: 'text', left: 100, top: 200, fontSize: 64, fontFamily: 'Poppins', fill: '#FFFFFF', fontWeight: 800, text: 'Welcome to\nAcme Corp', width: 1000 },
-        ],
-      },
-      createdBy: { _id: DEMO_USER._id, name: 'Demo User' },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      _id: '507f1f77bcf86cd799439015',
-      org: DEMO_USER.org,
-      brandKit: { _id: '507f1f77bcf86cd799439013', name: 'Acme Brand Kit', colors: ['#FF4D4D', '#1A1A1A', '#FAFAFA', '#FFD166', '#06D6A0'], fonts: { heading: 'Poppins', body: 'Inter' } },
-      type: 'invoice',
-      name: 'Invoice #001',
-      data: {
-        invoiceData: {
-          gstin: '22AAAAA0000A1Z5',
-          hsnCodes: '8471',
-          isGstEnabled: true,
-          lineItems: [
-            { description: 'Website Design', quantity: 1, rate: 25000 },
-            { description: 'Logo Design', quantity: 2, rate: 5000 },
-          ],
-        },
-      },
-      createdBy: { _id: DEMO_USER._id, name: 'Demo User' },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      _id: '507f1f77bcf86cd799439016',
-      org: DEMO_USER.org,
-      brandKit: { _id: '507f1f77bcf86cd799439013', name: 'Acme Brand Kit', colors: ['#FF4D4D', '#1A1A1A', '#FAFAFA', '#FFD166', '#06D6A0'], fonts: { heading: 'Poppins', body: 'Inter' } },
-      type: 'letterhead',
-      name: 'Company Letterhead',
-      data: {
-        header: 'Acme Corp\n123 Business Street, Mumbai - 400001\n+91 98765 43210',
-        body: 'Dear Sir/Madam,\n\nThis is to certify that...\n\nThank you,\nDemo User',
-        footer: 'info@acme.demo | www.acme.demo',
-      },
-      createdBy: { _id: DEMO_USER._id, name: 'Demo User' },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ]);
+// POST /api/demo/brandkits
+const createDemoBrandKit = async (req, res) => {
+  const kit = store.createDemoBrandKit(req.body);
+  res.status(201).json(kit);
 };
 
-// GET /api/demo/stats — returns demo stats
-const getDemoStats = async (req, res) => {
-  res.json({
-    totalAssets: 3,
-    memberCount: 2,
-    exportsThisMonth: 5,
-    assetTypes: [
-      { _id: 'card', count: 1 },
-      { _id: 'invoice', count: 1 },
-      { _id: 'letterhead', count: 1 },
-    ],
-  });
+// GET /api/demo/brandkits/:id
+const getDemoBrandKitById = async (req, res) => {
+  const kit = store.findDemoBrandKit(req.params.id);
+  if (!kit) {
+    res.status(404);
+    throw new Error('Brand kit not found');
+  }
+  res.json(kit);
 };
 
-// GET /api/demo/members — returns demo team members
-const getDemoMembers = async (req, res) => {
-  res.json([
-    { _id: DEMO_USER._id, name: 'Demo User', email: 'demo@brandos.io', role: 'owner' },
-    { _id: '507f1f77bcf86cd799439017', name: 'Jane Member', email: 'jane@acme.demo', role: 'member' },
-  ]);
-};
-
-// PUT /api/demo/brandkits/:id — update a brand kit (demo)
+// PUT /api/demo/brandkits/:id
 const updateDemoBrandKit = async (req, res) => {
-  const { name, colors, fonts, logoUrl } = req.body;
-  const updatedKit = {
-    _id: req.params.id,
-    org: DEMO_USER.org,
-    name: name || 'Acme Brand Kit',
-    colors: colors || ['#FF4D4D', '#1A1A1A', '#FAFAFA', '#FFD166', '#06D6A0'],
-    fonts: fonts || { heading: 'Poppins', body: 'Inter' },
-    logoUrl: logoUrl || 'https://placehold.co/200x80/FF4D4D/FFFFFF?text=ACME',
-    version: 4,
-    createdBy: DEMO_USER._id,
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  res.json(updatedKit);
+  const kit = store.updateDemoBrandKit(req.params.id, req.body);
+  res.json(kit);
 };
 
-// DELETE /api/demo/brandkits/:id — delete a brand kit (demo)
+// DELETE /api/demo/brandkits/:id
 const deleteDemoBrandKit = async (req, res) => {
+  store.deleteDemoBrandKit(req.params.id);
   res.json({ message: 'Brand kit deleted' });
 };
 
-// GET /api/demo/brandkits/:id — get a single brand kit by ID (demo)
-const getDemoBrandKitById = async (req, res) => {
-  res.json({
-    _id: req.params.id,
-    org: DEMO_USER.org,
-    name: 'Acme Brand Kit',
-    colors: ['#FF4D4D', '#1A1A1A', '#FAFAFA', '#FFD166', '#06D6A0'],
-    fonts: { heading: 'Poppins', body: 'Inter' },
-    logoUrl: 'https://placehold.co/200x80/FF4D4D/FFFFFF?text=ACME',
-    version: 3,
-    createdBy: DEMO_USER._id,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  });
-};
-
-// POST /api/demo/brandkits/extract-colors — AI color extraction demo
-const extractDemoColors = async (req, res) => {
-  const { imageUrl } = req.body;
-  // Return mock extracted colors (no Gemini needed in demo mode)
-  res.json({ colors: ['#FF4D4D', '#1A1A1A', '#FAFAFA', '#FFD166', '#06D6A0'] });
-};
-
-// POST /api/demo/brandkits/:id/logo — upload logo for a kit (demo)
+// POST /api/demo/brandkits/:id/logo
 const uploadDemoLogo = async (req, res) => {
   res.json({ logoUrl: 'https://placehold.co/200x80/FF4D4D/FFFFFF?text=LOGO' });
 };
 
-// POST /api/demo/brandkits/:id/set-active — set a kit as active (demo)
+// POST /api/demo/brandkits/:id/set-active
 const setActiveDemoKit = async (req, res) => {
-  res.json({ activeBrandKit: req.params.id });
+  const id = store.setActiveDemoKit(req.params.id);
+  res.json({ activeBrandKit: id });
 };
 
-module.exports = { demoLogin, getDemoOrg, createDemoBrandKit, getDemoBrandKits, getDemoBrandKitById, updateDemoBrandKit, deleteDemoBrandKit, uploadDemoLogo, setActiveDemoKit, extractDemoColors, getDemoAssets, getDemoStats, getDemoMembers };
+// POST /api/demo/brandkits/extract-colors — mock AI extraction
+const extractDemoColors = async (req, res) => {
+  res.json({ colors: ['#FF4D4D', '#1A1A1A', '#FAFAFA', '#FFD166', '#06D6A0'] });
+};
+
+// GET /api/demo/assets
+const getDemoAssets = async (req, res) => {
+  res.json(store.getDemoAssets());
+};
+
+// GET /api/demo/assets/:id
+const getDemoAssetById = async (req, res) => {
+  const asset = store.findDemoAsset(req.params.id);
+  if (!asset) {
+    res.status(404);
+    throw new Error('Asset not found');
+  }
+  res.json(asset);
+};
+
+// POST /api/demo/assets — create an asset in the in-memory store
+const createDemoAsset = async (req, res) => {
+  const asset = store.createDemoAsset(req.body);
+  res.status(201).json(asset);
+};
+
+// PUT /api/demo/assets/:id
+const updateDemoAsset = async (req, res) => {
+  const asset = store.updateDemoAsset(req.params.id, req.body);
+  if (!asset) {
+    res.status(404);
+    throw new Error('Asset not found');
+  }
+  res.json(asset);
+};
+
+// DELETE /api/demo/assets/:id
+const deleteDemoAsset = async (req, res) => {
+  const ok = store.deleteDemoAsset(req.params.id);
+  if (!ok) {
+    res.status(404);
+    throw new Error('Asset not found');
+  }
+  res.json({ message: 'Asset deleted' });
+};
+
+// GET /api/demo/stats
+const getDemoStats = async (req, res) => {
+  res.json(store.getDemoStats());
+};
+
+// GET /api/demo/members
+const getDemoMembers = async (req, res) => {
+  res.json(store.getDemoMembers());
+};
+
+// POST /api/demo/members — add a member (owner only, but demo is pro/owner)
+const addDemoMember = async (req, res) => {
+  const member = store.addDemoMember(req.body);
+  res.status(201).json(member);
+};
+
+module.exports = {
+  demoLogin,
+  getDemoOrg,
+  updateDemoOrg,
+  getDemoBrandKits,
+  createDemoBrandKit,
+  getDemoBrandKitById,
+  updateDemoBrandKit,
+  deleteDemoBrandKit,
+  uploadDemoLogo,
+  setActiveDemoKit,
+  extractDemoColors,
+  getDemoAssets,
+  getDemoAssetById,
+  createDemoAsset,
+  updateDemoAsset,
+  deleteDemoAsset,
+  getDemoStats,
+  getDemoMembers,
+  addDemoMember,
+};
+

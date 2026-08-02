@@ -11,6 +11,7 @@ export default function TwoFactorPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [otpValue, setOtpValue] = useState('');
+  const [otpKey, setOtpKey] = useState(0);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendLoading, setResendLoading] = useState(false);
 
@@ -31,6 +32,8 @@ export default function TwoFactorPage() {
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid verification code. Please try again.');
       setOtpValue('');
+      // Remount OTPInput to clear the boxes after a failed attempt
+      setOtpKey((prev) => prev + 1);
     } finally {
       setLoading(false);
     }
@@ -101,6 +104,7 @@ export default function TwoFactorPage() {
 
           <div style={{ marginBottom: '24px' }}>
             <OTPInput
+              key={otpKey}
               length={6}
               onComplete={handleOTPComplete}
               onValueChange={setOtpValue}

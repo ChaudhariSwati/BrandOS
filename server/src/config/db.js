@@ -17,6 +17,9 @@ const connectDB = async () => {
       heartbeatFrequencyMS: 10000,
       retryWrites: true,
       w: 'majority',
+      // Fail fast when DB is unavailable instead of buffering queries for 10s
+      bufferCommands: false,
+      bufferTimeoutMS: 0,
     });
     console.log(`MongoDB connected: ${conn.connection.host}`);
     console.log(`MongoDB pool size: ${conn.connection.client?.options?.maxPoolSize || 'default'}`);

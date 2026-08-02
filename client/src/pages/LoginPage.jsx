@@ -3,10 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import GoogleButton from '../components/auth/GoogleButton';
+import PasskeyButton from '../components/auth/PasskeyButton';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, googleLogin, demoLogin, showToast } = useAuth();
+  const { login, googleLogin, demoLogin, loginWithPasskey, showToast } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -15,6 +16,25 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+
+  const handlePasskeyLogin = async () => {
+    if (!email.trim()) {
+      setError('Enter your email to sign in with a passkey');
+      return;
+    }
+    setError('');
+    setPasskeyLoading(true);
+    try {
+      await loginWithPasskey(email.trim().toLowerCase());
+      showToast('Signed in with passkey!', 'success');
+      navigate('/', { replace: true });
+    } catch (err) {
+      setError(err?.message || err.response?.data?.message || 'Passkey sign-in failed');
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -109,6 +129,15 @@ export default function LoginPage() {
               loading={googleLoading}
               disabled={loading || demoLoading}
               text="signin_with"
+            />
+          </div>
+
+          <div style={{ marginBottom: '12px' }}>
+            <PasskeyButton
+              onLogin={handlePasskeyLogin}
+              loading={passkeyLoading}
+              disabled={loading || demoLoading || googleLoading}
+              mode="login"
             />
           </div>
 

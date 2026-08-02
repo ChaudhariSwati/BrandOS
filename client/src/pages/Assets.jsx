@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { listAssets, deleteAsset, renderCard, renderPdf, downloadAsset } from '../api/assets';
+import { listAssets, deleteAsset, renderCard, renderPdf, downloadAsset, downloadFromUrl } from '../api/assets';
 
 export default function Assets() {
   const navigate = useNavigate();
@@ -33,13 +33,8 @@ export default function Assets() {
       if (asset.type === 'card') {
         const res = await renderCard(asset._id);
         if (res.data.exportUrl) {
-          const filename = asset.name + '.png';
-          const link = document.createElement('a');
-          link.href = res.data.exportUrl;
-          link.download = filename;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+          // Use blob download so cross-origin (Cloudinary) URLs work
+          await downloadFromUrl(res.data.exportUrl, asset.name + '.png');
         } else {
           setError(res.data?.note || 'Card export not available');
         }
@@ -50,13 +45,8 @@ export default function Assets() {
         } catch (downloadErr) {
           const res = await renderPdf(asset._id);
           if (res.data.exportUrl) {
-            const filename = asset.name + '.pdf';
-            const link = document.createElement('a');
-            link.href = res.data.exportUrl;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // Use blob download so cross-origin (Cloudinary) URLs work
+            await downloadFromUrl(res.data.exportUrl, asset.name + '.pdf');
           } else {
             setError(res.data?.note || downloadErr.message || 'Export failed');
           }

@@ -58,7 +58,8 @@ export default function LetterheadEditor() {
       }
       const { data } = await renderPdf(assetId);
       if (data.exportUrl) window.open(data.exportUrl, '_blank');
-      else setError('Export not available');
+      else if (data.downloadUrl) await downloadAsset(assetId, (name || 'letterhead') + '.pdf');
+      else setError(data?.error || data?.note || 'Export not available');
     } catch (err) {
       setError(err.response?.data?.message || 'Export failed');
     } finally { setExporting(false); }

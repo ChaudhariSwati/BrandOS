@@ -1,6 +1,7 @@
 
 
 require('express-async-errors');
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -80,7 +81,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, '..', '..', 'uploads')));
 app.use('/api/', apiLimiter);
 
 app.get('/api/health', function (req, res) {
@@ -181,9 +182,12 @@ process.on('unhandledRejection', function (err) {
   logger.error('Unhandled Rejection', { error: err && err.message });
 });
 
+// Do NOT exit the process on uncaught exceptions — a single bad request
+// (e.g. a Puppeteer/Cloudinary failure during export) should not take
+// down the whole API server. Log it and keep serving.
 process.on('uncaughtException', function (err) {
   logger.error('Uncaught Exception', { error: err && err.message });
-  process.exit(1);
+  console.error('Uncaught Exception (server continues):', err && err.message);
 });
 
 module.exports = app;

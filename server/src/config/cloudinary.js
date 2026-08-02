@@ -6,4 +6,21 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+/**
+ * Validate that Cloudinary is actually configured with real credentials.
+ * Cloudinary API secrets are typically 24+ characters — a short value is
+ * almost certainly a placeholder or a partial / wrong secret.
+ * @returns {boolean}
+ */
+function isConfigured() {
+  const config = cloudinary.config();
+  return !!(
+    config.cloud_name &&
+    config.api_key &&
+    config.api_secret &&
+    String(config.api_secret).length >= 20
+  );
+}
+
 module.exports = cloudinary;
+module.exports.isConfigured = isConfigured;
