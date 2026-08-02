@@ -177,7 +177,7 @@ const extractColors = async (req, res, next) => {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
 
     const imageResp = await fetch(imageUrl);
     if (!imageResp.ok) throw new Error('Failed to fetch image');

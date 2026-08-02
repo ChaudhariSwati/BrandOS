@@ -126,6 +126,10 @@ async function checkExportLimit(orgId, isDemo) {
  */
 function uploadToCloudinary(buffer, folder, publicId) {
   return new Promise((resolve, reject) => {
+    // Guard against a failed/corrupt cloudinary package load or missing creds.
+    if (!cloudinary || !cloudinary.isConfigured || !cloudinary.isConfigured()) {
+      return reject(new Error('Cloudinary is not configured'));
+    }
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: `brandos/${folder}`,

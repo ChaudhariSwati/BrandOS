@@ -87,7 +87,7 @@ const signup = async (req, res) => {
 
 // POST /api/auth/login
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, rememberMe } = req.body;
 
   // Use generic error to prevent email enumeration
   const invalidCredentialsError = 'Invalid email or password';
@@ -114,12 +114,17 @@ const login = async (req, res) => {
   const accessToken = generateAccessToken(user);
   const { refreshToken } = generateRefreshToken(user);
 
+  // "Remember me" → 30-day refresh cookie; default → 7 days
+  const cookieMaxAge = rememberMe
+    ? 30 * 24 * 60 * 60 * 1000
+    : 7 * 24 * 60 * 60 * 1000;
+
   // Set refresh token as HTTP-only cookie
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: cookieMaxAge,
     path: '/api/auth',
   });
 

@@ -1,0 +1,2 @@
+STATUS 200
+{"headline":"Grand Opening Alert! Shop Our Biggest Sale Ever!","subheadline":"Join the party and enjoy exclusive discounts on everything today!","cta":"Shop The Sale Now","ai":true}

@@ -47,6 +47,11 @@ const DEMO_MEMBERS = [
 
 const demoTimestamp = (daysAgo) => new Date(Date.now() - 86400000 * (daysAgo || 0)).toISOString();
 
+// Mutable members array (addDemoMember pushes). Declared above the getters to
+// avoid the temporal-dead-zone ReferenceError from getDemoMembers() being
+// called before this `let` was initialized.
+let demoMembers = DEMO_MEMBERS.slice();
+
 let demoBrandKits = [
   { ...DEMO_KIT },
 ];
@@ -258,9 +263,7 @@ function getDemoStats() {
   };
 }
 
-// Keep members array reference mutable for add.
-let demoMembers = DEMO_MEMBERS.slice();
-
+// Members array was declared above with the other module state.
 function addDemoMember(data) {
   const member = {
     _id: 'demo-member-' + Date.now(),

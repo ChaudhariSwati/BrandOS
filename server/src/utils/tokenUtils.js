@@ -8,6 +8,17 @@ const REFRESH_TOKEN_EXPIRY = process.env.REFRESH_TOKEN_EXPIRY || '7d';
 const REFRESH_TOKEN_EXPIRY_SECONDS = 7 * 24 * 60 * 60; // 7 days in seconds
 
 /**
+ * Resolve the JWT secret with a deterministic fallback so that token
+ * GENERATION always matches token VERIFICATION (authMiddleware uses the
+ * same fallback). Without this, if JWT_SECRET is unset or differs across
+ * hosts, tokens signed at login would be rejected by the protect middleware
+ * and every authenticated request (dashboard, orgs, assets…) would 401.
+ */
+function getJwtSecret() {
+  return process.env.JWT_SECRET || 'demo-fallback-secret-brandos-2024';
+}
+
+/**
  * Generate an access token (short-lived).
  * @param {object} user — must have _id, org, role
  * @returns {string} JWT
@@ -21,7 +32,7 @@ function generateAccessToken(user) {
       type: 'access',
       tokenVersion: user.tokenVersion || 0,
     },
-    process.env.JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: ACCESS_TOKEN_EXPIRY }
   );
 }
@@ -38,7 +49,7 @@ function generate2FATempToken(user) {
       id: user._id.toString(),
       type: '2fa_temp',
     },
-    process.env.JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: '5m' }
   );
 }

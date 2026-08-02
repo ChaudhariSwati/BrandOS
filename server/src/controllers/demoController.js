@@ -156,6 +156,45 @@ const addDemoMember = async (req, res) => {
   res.status(201).json(member);
 };
 
+// ─── Demo AI Generation (no Gemini key / no DB needed) ────────────────
+const DEMO_CARD_DESIGN = (prompt) => {
+  const title = (prompt || 'Acme Corp').trim().split(/\s+/).slice(0, 5).join(' ');
+  return [
+    { type: 'rect', left: 0, top: 0, width: 1200, height: 675, fill: '#1A1A1A', rx: 0 },
+    { type: 'rect', left: 80, top: 80, width: 200, height: 12, fill: '#FF4D4D', rx: 6 },
+    { type: 'text', left: 80, top: 130, text: title, fontSize: 72, fontFamily: 'Poppins', fill: '#FFFFFF', fontWeight: 800, width: 1040, textAlign: 'left' },
+    { type: 'text', left: 80, top: 260, text: 'Demo design powered by BrandOS', fontSize: 28, fontFamily: 'Inter', fill: '#FFD166', fontWeight: 500, width: 800, textAlign: 'left' },
+  ];
+};
+
+// POST /api/demo/ai/generate-card
+const generateDemoCard = async (req, res) => {
+  const { prompt } = req.body || {};
+  res.json({
+    elements: DEMO_CARD_DESIGN(prompt),
+    name: (prompt || 'Demo Card').trim().split(/\s+/).slice(0, 4).join(' '),
+    ai: false,
+    demo: true,
+  });
+};
+
+// POST /api/demo/ai/generate-card-copy
+const generateDemoCardCopy = async (req, res) => {
+  const { prompt } = req.body || {};
+  res.json({
+    headline: prompt ? `Demo: ${prompt.trim().split(/\s+/).slice(0, 4).join(' ')}` : 'Acme Corp Demo',
+    subheadline: 'Demo mode — add a GEMINI_API_KEY to unlock real AI copywriting.',
+    cta: 'Get Started',
+    ai: false,
+    demo: true,
+  });
+};
+
+// GET /api/demo/ai/health
+const demoAiHealth = (req, res) => {
+  res.json({ configured: false, demo: true });
+};
+
 module.exports = {
   demoLogin,
   getDemoOrg,
@@ -176,5 +215,8 @@ module.exports = {
   getDemoStats,
   getDemoMembers,
   addDemoMember,
+  generateDemoCard,
+  generateDemoCardCopy,
+  demoAiHealth,
 };
 

@@ -21,6 +21,9 @@ const {
   getDemoStats,
   getDemoMembers,
   addDemoMember,
+  generateDemoCard,
+  generateDemoCardCopy,
+  demoAiHealth,
 } = require('../controllers/demoController');
 
 // Demo auth — no rate limit, always works
@@ -52,6 +55,11 @@ router.delete('/assets/:id', protect, deleteDemoAsset);
 router.get('/stats', protect, getDemoStats);
 router.get('/members', protect, getDemoMembers);
 router.post('/members', protect, addDemoMember);
+
+// Demo AI generation — mirrors /api/ai/* so the client rewrite works in demo mode
+router.get('/ai/health', protect, demoAiHealth);
+router.post('/ai/generate-card', protect, generateDemoCard);
+router.post('/ai/generate-card-copy', protect, generateDemoCardCopy);
 
 module.exports = router;
 

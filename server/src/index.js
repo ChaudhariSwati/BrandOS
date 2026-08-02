@@ -131,6 +131,7 @@ app.use('/api/brandkits', require('./routes/brandKitRoutes'));
 app.use('/api/assets', require('./routes/assetRoutes'));
 app.use('/api/export', require('./routes/exportRoutes'));
 app.use('/api/demo', require('./routes/demoRoutes'));
+app.use('/api/ai', require('./routes/aiRoutes'));
 
 // Dev-only: in-memory email inbox
 const { getDevEmails } = require('./utils/email');
