@@ -746,9 +746,16 @@ const fetchExportedFile = async (req, res, next) => {
     }
 
     // Only allow Cloudinary URLs to prevent SSRF
-    if (!url.startsWith('https://res.cloudinary.com/')) {
-      return res.status(400).json({ message: 'Only Cloudinary URLs are allowed' });
-    }
+    const isCloudinary = url.startsWith('https://res.cloudinary.com/');
+const isPlaceholder =
+  req.user?.isDemo &&
+  url.startsWith('https://placehold.co/');
+
+if (!isCloudinary && !isPlaceholder) {
+  return res.status(400).json({
+    message: 'Only approved image hosts are allowed'
+  });
+}
 
     const https = require('https');
     const proxyReq = https.get(url, (proxyRes) => {
