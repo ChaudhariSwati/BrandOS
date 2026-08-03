@@ -26,25 +26,24 @@ function getGeminiModel() {
   }
   try {
     const genAI = new GoogleGenerativeAI(key);
-    // Allow overriding the model via env var, but fall back to a known-supported default.
     const configured = process.env.GEMINI_MODEL;
-    const preferred = configured || 'gemini-flash-latest';
-    try {
-      return genAI.getGenerativeModel({ model: preferred });
-    } catch (err) {
-      console.warn(`[AI] Requested Gemini model "${preferred}" failed: ${err.message}`);
-      if (configured && configured !== 'gemini-flash-latest') {
-        // Try a safe default if the configured model isn't supported for this API surface
-        try {
-          console.warn('[AI] Falling back to gemini-flash-latest');
-          return genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
-        } catch (err2) {
-          console.warn('[AI] Fallback to gemini-flash-latest also failed:', err2.message);
-          return null;
-        }
+    const candidates = [
+      configured,
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash-latest',
+      'gemini-flash-latest',
+    ].filter((model, index, list) => !!model && list.indexOf(model) === index);
+
+    for (const modelName of candidates) {
+      try {
+        return genAI.getGenerativeModel({ model: modelName });
+      } catch (err) {
+        console.warn(`[AI] Gemini model "${modelName}" unavailable: ${err.message}`);
       }
-      return null;
     }
+
+    return null;
   } catch (err) {
     console.warn('[AI] Failed to initialize Gemini model:', err.message);
     return null;
@@ -251,27 +250,25 @@ const generateCard = async (req, res) => {
     let elements = null;
     let provider = 'demo';
 
-    if (getHuggingFaceConfig()) {
+    const model = getGeminiModel();
+    if (model) {
+      try {
+        const result = await model.generateContent(buildCardDesignPrompt(kit, prompt.trim(), templateKey));
+        const text = result.response.text();
+        const parsed = parseJsonFromResponse(text);
+        elements = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.elements) ? parsed.elements : null;
+        provider = 'gemini';
+      } catch (err) {
+        console.warn('[AI] Gemini generateCard failed:', err.message);
+      }
+    }
+
+    if (!elements && getHuggingFaceConfig()) {
       try {
         elements = await generateCardViaHuggingFace(kit, prompt.trim(), templateKey);
         provider = 'huggingface';
       } catch (err) {
         console.warn('[AI] Hugging Face generateCard failed:', err.message);
-      }
-    }
-
-    if (!elements) {
-      const model = getGeminiModel();
-      if (model) {
-        try {
-          const result = await model.generateContent(buildCardDesignPrompt(kit, prompt.trim(), templateKey));
-          const text = result.response.text();
-          const parsed = parseJsonFromResponse(text);
-          elements = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.elements) ? parsed.elements : null;
-          provider = 'gemini';
-        } catch (err) {
-          console.warn('[AI] Gemini generateCard failed:', err.message);
-        }
       }
     }
 
@@ -328,26 +325,24 @@ const generateCardCopy = async (req, res) => {
     let copy = null;
     let provider = 'demo';
 
-    if (getHuggingFaceConfig()) {
+    const model = getGeminiModel();
+    if (model) {
+      try {
+        const result = await model.generateContent(buildCardCopyPrompt(kit, prompt.trim(), tone, templateKey));
+        const text = result.response.text();
+        copy = parseJsonFromResponse(text);
+        provider = 'gemini';
+      } catch (err) {
+        console.warn('[AI] Gemini generateCardCopy failed:', err.message);
+      }
+    }
+
+    if ((!copy || typeof copy !== 'object' || Array.isArray(copy)) && getHuggingFaceConfig()) {
       try {
         copy = await generateCardCopyViaHuggingFace(kit, prompt.trim(), tone, templateKey);
         provider = 'huggingface';
       } catch (err) {
         console.warn('[AI] Hugging Face generateCardCopy failed:', err.message);
-      }
-    }
-
-    if (!copy) {
-      const model = getGeminiModel();
-      if (model) {
-        try {
-          const result = await model.generateContent(buildCardCopyPrompt(kit, prompt.trim(), tone, templateKey));
-          const text = result.response.text();
-          copy = parseJsonFromResponse(text);
-          provider = 'gemini';
-        } catch (err) {
-          console.warn('[AI] Gemini generateCardCopy failed:', err.message);
-        }
       }
     }
 
