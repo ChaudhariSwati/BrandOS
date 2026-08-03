@@ -484,22 +484,25 @@ function buildLetterheadHtml(kit, elements, data) {
   const accentColor = kit.colors?.[1] || '#333333';
   const headingFont = kit.fonts?.heading || 'Poppins';
   const bodyFont = kit.fonts?.body || 'Inter';
+  const companyName = (data && (data.companyName || data.header?.split('\n')[0])) || '';
+  const addressLine = (data && (data.addressLine || data.header?.split('\n').slice(1).join('\n') || data.body)) || '';
+  const contactInfo = (data && (data.contactInfo || data.body || data.footer)) || '';
+  const footerNote = (data && (data.footerNote || data.footer)) || '';
 
   let bodyContent = '';
 
   if (!elements || elements.length === 0) {
-    const header = (data && data.header) || '';
-    const body = (data && data.body) || '';
-    const footer = (data && data.footer) || '';
-
-    if (header) {
-      bodyContent += `<div style="font-family:${headingFont};font-size:18px;font-weight:700;margin-bottom:24px;border-bottom:2px solid ${accentColor};padding-bottom:12px;white-space:pre-line;">${header}</div>`;
+    if (companyName) {
+      bodyContent += `<div style="font-family:${headingFont};font-size:18px;font-weight:700;margin-bottom:24px;border-bottom:2px solid ${accentColor};padding-bottom:12px;white-space:pre-line;">${companyName}</div>`;
     }
-    if (body) {
-      bodyContent += `<div style="font-family:${bodyFont};font-size:14px;line-height:1.8;white-space:pre-line;min-height:400px;">${body}</div>`;
+    if (addressLine) {
+      bodyContent += `<div style="font-family:${bodyFont};font-size:14px;line-height:1.8;white-space:pre-line;min-height:400px;">${addressLine}</div>`;
     }
-    if (footer) {
-      bodyContent += `<div style="font-family:${bodyFont};font-size:12px;color:#888;margin-top:48px;border-top:2px solid ${accentColor};padding-top:12px;white-space:pre-line;">${footer}</div>`;
+    if (contactInfo) {
+      bodyContent += `<div style="font-family:${bodyFont};font-size:12px;color:#666;margin-top:16px;white-space:pre-line;">${contactInfo}</div>`;
+    }
+    if (footerNote) {
+      bodyContent += `<div style="font-family:${bodyFont};font-size:12px;color:#888;margin-top:48px;border-top:2px solid ${accentColor};padding-top:12px;white-space:pre-line;">${footerNote}</div>`;
     }
   } else {
     for (const el of elements || []) {
@@ -676,31 +679,38 @@ function buildInvoicePdf(doc, kit, elements, data, bgColor, accentColor, heading
  * Build a letterhead PDF using PDFKit.
  */
 function buildLetterheadPdf(doc, kit, elements, data, bgColor, accentColor, headingFont, bodyFont) {
-  const header = (data && data.header) || '';
-  const body = (data && data.body) || '';
-  const footer = (data && data.footer) || '';
+  const companyName = (data && (data.companyName || data.header?.split('\n')[0])) || '';
+  const addressLine = (data && (data.addressLine || data.header?.split('\n').slice(1).join('\n') || data.body)) || '';
+  const contactInfo = (data && (data.contactInfo || data.body || data.footer)) || '';
+  const footerNote = (data && (data.footerNote || data.footer)) || '';
   const hFont = safePdfFont(headingFont, 'Helvetica-Bold');
   const bFont = safePdfFont(bodyFont, 'Helvetica');
 
-  if (header) {
+  if (companyName) {
     doc.fontSize(16).font(hFont).fillColor('#000');
-    doc.text(header, { align: 'left' });
+    doc.text(companyName, { align: 'left' });
     doc.moveDown(0.5);
     doc.moveTo(doc.x, doc.y).lineTo(doc.x + 500, doc.y).strokeColor(accentColor).stroke();
     doc.moveDown(1);
   }
 
-  if (body) {
+  if (addressLine) {
     doc.fontSize(12).font(bFont).fillColor('#000');
-    doc.text(body, { align: 'left', lineGap: 6 });
+    doc.text(addressLine, { align: 'left', lineGap: 6 });
   }
 
-  if (footer) {
+  if (contactInfo) {
+    doc.moveDown(0.5);
+    doc.fontSize(10).font(bFont).fillColor('#666');
+    doc.text(contactInfo, { align: 'left', lineGap: 4 });
+  }
+
+  if (footerNote) {
     doc.moveDown(3);
     doc.moveTo(doc.x, doc.y).lineTo(doc.x + 500, doc.y).strokeColor(accentColor).stroke();
     doc.moveDown(0.5);
     doc.fontSize(10).font(bFont).fillColor('#888');
-    doc.text(footer, { align: 'center' });
+    doc.text(footerNote, { align: 'center' });
   }
 }
 

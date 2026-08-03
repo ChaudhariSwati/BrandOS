@@ -1,6 +1,30 @@
 const Asset = require('../models/Asset');
 const BrandKit = require('../models/BrandKit');
 
+function normalizeLetterheadData(data) {
+  if (!data || typeof data !== 'object') return null;
+
+  const header = typeof data.header === 'string' ? data.header.trim() : '';
+  const body = typeof data.body === 'string' ? data.body.trim() : '';
+  const footer = typeof data.footer === 'string' ? data.footer.trim() : '';
+
+  const companyName = typeof data.companyName === 'string' ? data.companyName.trim() : (header.split('\n')[0] || '');
+  const addressLine = typeof data.addressLine === 'string' ? data.addressLine.trim() : (header.split('\n').slice(1).join('\n') || body || '');
+  const contactInfo = typeof data.contactInfo === 'string' ? data.contactInfo.trim() : (body || footer || '');
+  const footerNote = typeof data.footerNote === 'string' ? data.footerNote.trim() : (footer || '');
+
+  if (!companyName || !addressLine || !contactInfo || !footerNote) {
+    return null;
+  }
+
+  return {
+    companyName,
+    addressLine,
+    contactInfo,
+    footerNote,
+  };
+}
+
 // GET /api/assets
 const listAssets = async (req, res, next) => {
   try {
@@ -28,6 +52,14 @@ const createAsset = async (req, res, next) => {
     if (!validTypes.includes(type)) {
       res.status(400);
       throw new Error(`type must be one of: ${validTypes.join(', ')}`);
+    }
+    if (type === 'letterhead') {
+      const normalized = normalizeLetterheadData(data);
+      if (!normalized) {
+        res.status(400);
+        throw new Error('letterhead data must include companyName, addressLine, contactInfo, and footerNote');
+      }
+      req.body.data = normalized;
     }
     // Verify brand kit belongs to org
     const kit = await BrandKit.findOne({ _id: brandKit, org: req.orgId });
@@ -75,7 +107,16 @@ const updateAsset = async (req, res, next) => {
       throw new Error('Asset not found');
     }
     if (name !== undefined) asset.name = name;
-    if (data !== undefined) asset.data = data;
+    if (asset.type === 'letterhead' && data !== undefined) {
+      const normalized = normalizeLetterheadData(data);
+      if (!normalized) {
+        res.status(400);
+        throw new Error('letterhead data must include companyName, addressLine, contactInfo, and footerNote');
+      }
+      asset.data = normalized;
+    } else if (data !== undefined) {
+      asset.data = data;
+    }
     await asset.save();
     res.json(asset);
   } catch (err) {

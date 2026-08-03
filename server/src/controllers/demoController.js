@@ -157,21 +157,31 @@ const addDemoMember = async (req, res) => {
 };
 
 // ─── Demo AI Generation (no Gemini key / no DB needed) ────────────────
-const DEMO_CARD_DESIGN = (prompt) => {
+const DEMO_CARD_DESIGN = (prompt, templateKey) => {
   const title = (prompt || 'Acme Corp').trim().split(/\s+/).slice(0, 5).join(' ');
+  if (templateKey === 'social') {
+    return [
+      { type: 'rect', left: 0, top: 0, width: 1200, height: 675, fill: '#1A1A1A', rx: 0 },
+      { type: 'rect', left: 80, top: 80, width: 200, height: 12, fill: '#FF4D4D', rx: 6 },
+      { type: 'text', left: 80, top: 130, text: title, fontSize: 72, fontFamily: 'Poppins', fill: '#FFFFFF', fontWeight: 800, width: 1040, textAlign: 'left' },
+      { type: 'text', left: 80, top: 260, text: 'Demo design powered by BrandOS', fontSize: 28, fontFamily: 'Inter', fill: '#FFD166', fontWeight: 500, width: 800, textAlign: 'left' },
+    ];
+  }
   return [
-    { type: 'rect', left: 0, top: 0, width: 1200, height: 675, fill: '#1A1A1A', rx: 0 },
-    { type: 'rect', left: 80, top: 80, width: 200, height: 12, fill: '#FF4D4D', rx: 6 },
-    { type: 'text', left: 80, top: 130, text: title, fontSize: 72, fontFamily: 'Poppins', fill: '#FFFFFF', fontWeight: 800, width: 1040, textAlign: 'left' },
-    { type: 'text', left: 80, top: 260, text: 'Demo design powered by BrandOS', fontSize: 28, fontFamily: 'Inter', fill: '#FFD166', fontWeight: 500, width: 800, textAlign: 'left' },
+    { type: 'rect', left: 0, top: 0, width: 1050, height: 600, fill: '#1A1A1A', rx: 44 },
+    { type: 'rect', left: 0, top: 0, width: 300, height: 600, fill: '#FF4D4D', rx: 44 },
+    { type: 'text', left: 60, top: 72, text: 'BK', fontSize: 68, fontFamily: 'Poppins', fill: '#FFFFFF', fontWeight: 800, width: 160, textAlign: 'center' },
+    { type: 'text', left: 340, top: 120, text: title, fontSize: 58, fontFamily: 'Poppins', fill: '#FFFFFF', fontWeight: 800, width: 620, textAlign: 'left' },
+    { type: 'text', left: 340, top: 196, text: 'Demo card powered by BrandOS', fontSize: 24, fontFamily: 'Inter', fill: '#FFD166', fontWeight: 600, width: 620, textAlign: 'left' },
+    { type: 'text', left: 340, top: 314, text: 'demo@brandos.com   |   +91 90000 00000', fontSize: 22, fontFamily: 'Inter', fill: '#FFFFFF', fontWeight: 500, width: 620, textAlign: 'left' },
   ];
 };
 
 // POST /api/demo/ai/generate-card
 const generateDemoCard = async (req, res) => {
-  const { prompt } = req.body || {};
+  const { prompt, template } = req.body || {};
   res.json({
-    elements: DEMO_CARD_DESIGN(prompt),
+    elements: DEMO_CARD_DESIGN(prompt, template),
     name: (prompt || 'Demo Card').trim().split(/\s+/).slice(0, 4).join(' '),
     ai: false,
     demo: true,
